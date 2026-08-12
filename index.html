@@ -100,6 +100,11 @@
   .bk-table th:first-child,.bk-table td:first-child{text-align:left;}
   .bk-table thead th{background:#fff;color:var(--ink-soft);font-weight:600;font-size:11px;}
   .bk-table tfoot td{font-weight:700;background:var(--surface-2);}
+  .bk-table td.cell-stack{white-space:nowrap;cursor:help;}
+  .bk-table td.cell-stack .up{font-family:var(--mono);font-weight:700;color:var(--teal-dark);}
+  .bk-table td.cell-stack .mult{font-family:var(--mono);font-weight:600;color:var(--amber);margin-left:3px;}
+  .bk-table td.cell-stack .na{color:var(--ink-soft);font-weight:400;font-style:italic;font-size:11.5px;}
+  .bk-table td.cell-stack .zero{color:#C3CBCD;font-family:var(--mono);}
 
   table.rate-table th,table.rate-table td{padding:6px 8px;border-bottom:1px solid var(--line);font-size:12px;text-align:left;}
   table.rate-table th{color:var(--ink-soft);font-weight:600;font-size:11px;position:sticky;top:0;background:#fff;}
@@ -625,8 +630,24 @@ function renderResult(res){
 }
 function breakdownHtml(label, r){
   const svcPerMeter = r.totalMeterCount ? (r.serviceTotal / r.totalMeterCount) : (SERVICE_FEE[r.version]||0);
+  // unit: 單價, mult: 顯示在×後面的乘數說明(例如 "236" 或 "0m×236"), ext: 小計(hover顯示)
+  const stack = (unit, mult, ext) => {
+    if(ext===0) return `<td class="nums cell-stack zero" title="小計 $0">—</td>`;
+    return `<td class="nums cell-stack" title="小計 $${fmt(ext)}"><span class="up">$${fmt(unit)}</span><span class="mult">×${mult}</span></td>`;
+  };
+  const naCell = `<td class="nums cell-stack na" colspan="4" title="新版分表規則：不計算接水處/水表組/工料費">不適用（規則排除）</td>`;
   const rows = r.lines.map(l=>{
     const svcLine = l.count * svcPerMeter;
+    const jsChuExt = l.接水處.value * l.count;
+    const sbExt = l.水表組.value * l.count;
+    const b4mExt = l.基本4M.value * l.count;
+    const perMExt = l.每加1M.value * l.excess * l.count;
+    const pipeCols = l.skipPipeCost ? naCell : (
+      stack(l.接水處.value, l.count, jsChuExt) +
+      stack(l.水表組.value, l.count, sbExt) +
+      stack(l.基本4M.value, l.count, b4mExt) +
+      stack(l.每加1M.value, `${l.excess}m×${l.count}`, perMExt)
+    );
     return `
     <tr>
       <td>${l.groupLabel}</td>
@@ -634,21 +655,19 @@ function breakdownHtml(label, r){
       <td>${l.caliber}mm</td>
       <td>${l.count}</td>
       <td>${l.skipPipeCost ? '—' : l.length}</td>
-      <td class="nums">${fmt(l.接水處.value)}</td>
-      <td class="nums">${fmt(l.水表組.value)}</td>
-      <td class="nums">${fmt(l.基本4M.value)}</td>
-      <td class="nums">${fmt(l.每加1M.value)}×${l.excess}</td>
-      <td class="nums">${fmt(l.接水費.value)}</td>
-      <td class="nums">${fmt(l.裝表費.value)}</td>
-      <td class="nums">${fmt(svcLine)}</td>
-      <td class="nums">${fmt(l.lineTotal + svcLine)}</td>
+      ${pipeCols}
+      ${stack(l.接水費.value, l.count, l.connSubtotal)}
+      ${stack(l.裝表費.value, l.count, l.installSubtotal)}
+      ${stack(svcPerMeter, l.count, svcLine)}
+      <td class="nums" style="font-weight:700;">${fmt(l.lineTotal + svcLine)}</td>
       <td>${l.anyUnverified?'<span class="badge warn">需補充</span>':'<span class="badge ok">已核對</span>'}</td>
     </tr>`;}).join('');
   return `
   <details class="breakdown">
     <summary>${label}明細（管線費 $${fmt(r.pipeTotal)} ＋ 接水費 $${fmt(r.connTotal)} ＋ 裝表費 $${fmt(r.installTotal)} ＋ 服務費 $${fmt(r.serviceTotal)}（${r.totalMeterCount} 顆表）＝ $${fmt(r.grandTotal)}）</summary>
+    <p style="color:var(--ink-soft);font-size:11px;margin:2px 0 8px;">每格顯示「單價×數量」，滑鼠移到格子上可看該項小計。</p>
     <table class="bk-table">
-      <thead><tr><th>表別</th><th>管材</th><th>口徑</th><th>顆數</th><th>長度</th><th>接水處</th><th>水表組</th><th>基本4M</th><th>每加1M×超出</th><th>接水費/顆</th><th>裝表費/顆</th><th>服務費</th><th>小計</th><th>狀態</th></tr></thead>
+      <thead><tr><th>表別</th><th>管材</th><th>口徑</th><th>顆數</th><th>長度</th><th>接水處</th><th>水表組</th><th>基本4M</th><th>每加1M×超出</th><th>接水費</th><th>裝表費</th><th>服務費</th><th>小計</th><th>狀態</th></tr></thead>
       <tbody>${rows || '<tr><td colspan="14" style="text-align:center;color:var(--ink-soft)">尚無資料</td></tr>'}</tbody>
     </table>
   </details>`;
