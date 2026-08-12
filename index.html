@@ -1,0 +1,1489 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>用戶進水管新裝工程費 · 新舊版計算比較系統</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<style>
+  :root{
+    --bg:#F5F8F8;
+    --surface:#FFFFFF;
+    --surface-2:#EEF3F3;
+    --ink:#0E2530;
+    --ink-soft:#4B6470;
+    --line:#DCE6E7;
+    --teal:#0B5566;
+    --teal-dark:#083E4A;
+    --teal-soft:#E4EFEF;
+    --old:#8A97A0;
+    --old-soft:#EEF0F2;
+    --amber:#B2660B;
+    --amber-soft:#FBEEDD;
+    --up:#C22B2B;
+    --down:#1C8A4B;
+    --radius:10px;
+    --mono:'IBM Plex Mono', ui-monospace, monospace;
+    --sans:'Inter', system-ui, sans-serif;
+    --disp:'Space Grotesk', var(--sans);
+  }
+  *{box-sizing:border-box;}
+  body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--sans);font-size:14px;line-height:1.55;}
+  h1,h2,h3,h4{font-family:var(--disp);font-weight:600;margin:0;}
+  table{border-collapse:collapse;width:100%;}
+  input,select,button,textarea{font-family:inherit;font-size:13px;}
+  .nums{font-family:var(--mono);font-variant-numeric:tabular-nums;}
+
+  header.top{background:linear-gradient(135deg,var(--teal-dark),var(--teal));color:#fff;padding:22px 28px;position:relative;overflow:hidden;}
+  header.top::after{content:"";position:absolute;right:-40px;top:-60px;width:220px;height:220px;border-radius:50%;background:rgba(255,255,255,.06);}
+  header.top::before{content:"";position:absolute;left:0;right:0;bottom:0;height:6px;
+    background:repeating-linear-gradient(90deg,rgba(255,255,255,.35) 0 22px, transparent 22px 34px);}
+  header.top h1{font-size:21px;letter-spacing:.2px;}
+  header.top p{margin:6px 0 0;color:rgba(255,255,255,.78);font-size:13px;max-width:720px;}
+
+  nav.tabs{display:flex;gap:2px;background:var(--surface-2);padding:0 24px;border-bottom:1px solid var(--line);}
+  nav.tabs button{appearance:none;border:none;background:transparent;padding:13px 18px;font-family:var(--disp);font-size:13.5px;
+    color:var(--ink-soft);cursor:pointer;border-bottom:3px solid transparent;font-weight:600;}
+  nav.tabs button.active{color:var(--teal-dark);border-bottom-color:var(--teal);}
+  nav.tabs button:hover{color:var(--teal-dark);}
+
+  main{max-width:1180px;margin:0 auto;padding:22px 24px 80px;}
+  .panel{display:none;}
+  .panel.active{display:block;}
+
+  .card{background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);padding:18px 20px;margin-bottom:16px;}
+  .card h3{font-size:14.5px;color:var(--teal-dark);display:flex;align-items:center;gap:8px;}
+  .card h3 .tag{font-size:11px;background:var(--teal-soft);color:var(--teal-dark);padding:2px 8px;border-radius:20px;font-family:var(--sans);font-weight:600;}
+  .grid{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;}
+  .grid.g2{grid-template-columns:repeat(2,1fr);}
+  .field label{display:block;font-size:11.5px;color:var(--ink-soft);margin-bottom:4px;font-weight:600;}
+  .field input,.field select{width:100%;padding:8px 9px;border:1px solid var(--line);border-radius:7px;background:#fff;color:var(--ink);}
+  .field input:focus,.field select:focus{outline:2px solid var(--teal);outline-offset:1px;}
+
+  .group-row{border:1px solid var(--line);border-radius:8px;padding:12px;margin-bottom:10px;background:var(--surface-2);position:relative;}
+  .group-row .rm{position:absolute;top:8px;right:8px;background:none;border:none;color:var(--up);cursor:pointer;font-size:16px;line-height:1;padding:2px 6px;}
+  .add-btn{background:#fff;border:1px dashed var(--teal);color:var(--teal-dark);border-radius:7px;padding:7px 12px;cursor:pointer;font-weight:600;font-size:12.5px;}
+  .add-btn:hover{background:var(--teal-soft);}
+  .btn{background:var(--teal);color:#fff;border:none;border-radius:7px;padding:9px 16px;cursor:pointer;font-weight:600;font-size:13px;}
+  .btn:hover{background:var(--teal-dark);}
+  .btn.secondary{background:#fff;color:var(--teal-dark);border:1px solid var(--teal);}
+  .btn.secondary:hover{background:var(--teal-soft);}
+  .btn.ghost{background:transparent;color:var(--ink-soft);border:1px solid var(--line);}
+  .row-actions{display:flex;gap:10px;margin-top:6px;flex-wrap:wrap;}
+
+  .badge{display:inline-block;font-size:10.5px;padding:2px 7px;border-radius:20px;font-weight:700;letter-spacing:.2px;}
+  .badge.ok{background:#E3F5EA;color:var(--down);}
+  .badge.warn{background:var(--amber-soft);color:var(--amber);}
+
+  .notice{background:var(--amber-soft);border:1px solid #F0D6AE;color:#7A4A08;padding:10px 14px;border-radius:8px;font-size:12.5px;margin-bottom:16px;}
+  .notice.info{background:var(--teal-soft);border-color:#BFE0E0;color:var(--teal-dark);}
+
+  .compare-wrap{display:grid;grid-template-columns:1fr 1fr;gap:14px;}
+  .ver-card{border-radius:var(--radius);padding:16px;color:#fff;}
+  .ver-card.new{background:linear-gradient(150deg,var(--teal-dark),var(--teal));}
+  .ver-card.old{background:linear-gradient(150deg,#5A6870,var(--old));}
+  .ver-card .label{font-size:11.5px;opacity:.8;font-weight:600;letter-spacing:.5px;}
+  .ver-card .total{font-family:var(--disp);font-size:30px;margin:4px 0 2px;}
+  .diff-banner{grid-column:1/-1;display:flex;align-items:center;justify-content:space-between;background:#fff;border:1px solid var(--line);
+    border-radius:var(--radius);padding:14px 18px;}
+  .diff-banner .amt{font-family:var(--disp);font-size:22px;}
+  .diff-banner .amt.up{color:var(--up);} .diff-banner .amt.down{color:var(--down);}
+
+  details.breakdown{margin-top:14px;border:1px solid var(--line);border-radius:8px;overflow:hidden;}
+  details.breakdown>summary{cursor:pointer;padding:10px 14px;background:var(--surface-2);font-weight:600;font-size:13px;color:var(--teal-dark);list-style:none;}
+  details.breakdown>summary::-webkit-details-marker{display:none;}
+  details.breakdown>summary::before{content:"▸ ";}
+  details.breakdown[open]>summary::before{content:"▾ ";}
+  .bk-table th,.bk-table td{padding:6px 10px;border-bottom:1px solid var(--line);text-align:right;font-size:12.5px;}
+  .bk-table th:first-child,.bk-table td:first-child{text-align:left;}
+  .bk-table thead th{background:#fff;color:var(--ink-soft);font-weight:600;font-size:11px;}
+  .bk-table tfoot td{font-weight:700;background:var(--surface-2);}
+
+  table.rate-table th,table.rate-table td{padding:6px 8px;border-bottom:1px solid var(--line);font-size:12px;text-align:left;}
+  table.rate-table th{color:var(--ink-soft);font-weight:600;font-size:11px;position:sticky;top:0;background:#fff;}
+  table.rate-table td.num{text-align:right;}
+  table.rate-table input{width:100%;border:1px solid transparent;background:transparent;padding:3px 5px;border-radius:5px;}
+  table.rate-table input:hover{border-color:var(--line);}
+  table.rate-table input:focus{border-color:var(--teal);background:#fff;}
+  .rate-scroll{max-height:520px;overflow:auto;border:1px solid var(--line);border-radius:8px;}
+
+  .filters{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:14px;}
+  .filters .field{min-width:150px;}
+
+  .agg-table th,.agg-table td{padding:9px 12px;border-bottom:1px solid var(--line);font-size:13px;}
+  .agg-table th{text-align:left;color:var(--ink-soft);font-size:11px;font-weight:700;background:var(--surface-2);}
+  .agg-table td.num{text-align:right;font-family:var(--mono);}
+  .agg-table tr.grp{cursor:pointer;}
+  .agg-table tr.grp:hover{background:var(--surface-2);}
+  .case-list{background:var(--surface-2);}
+  .case-list td{font-size:12px;}
+  .pill{padding:1px 8px;border-radius:20px;font-size:10.5px;font-weight:700;}
+  .pill.up{background:#FBE4E4;color:var(--up);}
+  .pill.down{background:#E3F5EA;color:var(--down);}
+
+  footer.status{position:fixed;bottom:0;left:0;right:0;background:var(--teal-dark);color:rgba(255,255,255,.85);font-size:11.5px;
+    padding:6px 24px;display:flex;justify-content:space-between;}
+  .savebar{display:flex;gap:10px;align-items:center;justify-content:flex-end;margin-top:14px;}
+  .savebar .msg{font-size:12px;color:var(--down);font-weight:600;}
+  @media (max-width:820px){ .grid{grid-template-columns:repeat(2,1fr);} .compare-wrap{grid-template-columns:1fr;} }
+</style>
+</head>
+<body>
+
+<header class="top">
+  <h1>用戶進水管新裝工程費 · 新舊版計算比較系統</h1>
+  <p>輸入案件資訊 → 依費率表同時試算新版／舊版金額 → 存檔後可跨案件、跨單位、跨時間交叉分析差異。資料為單位共用：若已在「費率管理」頁設定 Google 試算表網址，所有資料（費率＋案件）都以該試算表為準；尚未設定時，先暫存在本系統的共用雲端快取。</p>
+</header>
+
+<nav class="tabs">
+  <button data-tab="input" class="active">① 案件輸入</button>
+  <button data-tab="rates">② 費率管理</button>
+  <button data-tab="analysis">③ 交叉分析</button>
+</nav>
+
+<main>
+
+<!-- ===================== TAB 1: INPUT ===================== -->
+<section class="panel active" id="panel-input">
+
+  <div class="notice info">
+    費率已依「01新版.pdf」（回填CLSM欄位）與「02舊版.pdf」附件一（日間欄位）逐格核對匯入（2026/08/11），共16種口徑 × 各管材全部補齊。若貴單位手上的正式文件另有修訂版本，仍請至「② 費率管理」核對後再作為正式報價依據。
+  </div>
+
+  <div class="card">
+    <h3>基本資料</h3>
+    <div class="grid">
+      <div class="field"><label>單位名稱（服務所）</label><input id="f-unit" placeholder="例：台北服務所"></div>
+      <div class="field"><label>系統案號</label><input id="f-caseno" placeholder="例：TP-2026-0001"></div>
+      <div class="field"><label>建立時間</label><input id="f-date" type="date"></div>
+      <div class="field"><label>案件類型</label>
+        <select id="f-type"><option value="集合住宅">集合住宅（總表＋公共/獨立表＋分表）</option><option value="獨立戶">獨立戶（僅獨立表）</option></select>
+      </div>
+      <div class="field" style="grid-column:span 2;"><label>建案名稱</label><input id="f-project" placeholder="例：○○花園社區"></div>
+      <div class="field" style="grid-column:span 2;"><label>地址</label><input id="f-address" placeholder="例：台北市○○區○○路100號"></div>
+    </div>
+  </div>
+
+  <div class="card">
+    <h3>總表 <span class="tag">通常 1 顆</span></h3>
+    <div id="rows-main"></div>
+    <button class="add-btn" onclick="addRow('main')">＋ 新增一組總表規格</button>
+  </div>
+
+  <div class="card">
+    <h3>獨立表／公共表</h3>
+    <div id="rows-indep"></div>
+    <button class="add-btn" onclick="addRow('indep')">＋ 新增一組獨立表／公共表規格</button>
+  </div>
+
+  <div class="card">
+    <h3>分表</h3>
+    <div id="rows-sub"></div>
+    <button class="add-btn" onclick="addRow('sub')">＋ 新增一組分表規格</button>
+  </div>
+
+  <div id="edit-mode-banner" style="display:none;" class="notice warn">
+    ✏️ 正在編輯已存檔案件 <b id="edit-mode-caseno"></b>，按「存檔到雲端」會直接覆蓋這筆案件（不會另外新增一筆）。
+    <button class="btn ghost" style="padding:3px 10px;font-size:12px;margin-left:8px;" onclick="exitEditMode()">取消編輯，改成新增新案件</button>
+  </div>
+  <div class="row-actions">
+    <button class="btn" onclick="calculate()">試算新版／舊版金額</button>
+    <button class="btn secondary" onclick="saveCase()" id="save-btn">存檔到雲端</button>
+    <button class="btn ghost" onclick="resetForm()">清空表單</button>
+  </div>
+  <div class="savebar"><span class="msg" id="save-msg"></span></div>
+
+  <div id="result-area"></div>
+
+</section>
+
+<!-- ===================== TAB 2: RATES ===================== -->
+<section class="panel" id="panel-rates">
+  <div class="notice" id="seed-outdated-notice" style="display:none;">
+    ⚠ 偵測到雲端已存的費率資料，是用比較舊版本的系統存的（與這個網頁檔內建的最新費率版本不一致）。
+    如果您沒有在下面手動調整過費率，建議按一下「還原為內建種子費率」套用最新版；
+    如果您已經自行調整過費率內容，按下去會覆蓋您的調整，請先自行確認或備份（可用「下載CSV範本」）。
+  </div>
+  <div class="notice info">
+    費率資料以「版本／管材／口徑類型（管線口徑或水表口徑）／口徑／項目／金額」的長格式儲存，方便您用 Excel／CSV 整批維護。之後〈遊戲規則〉微調時，直接在此頁修改或重新上傳即可，不需要改程式。
+  </div>
+  <div class="card">
+    <h3>Google 試算表同步（v2：費率＋案件都存這裡）<span class="tag" id="gas-status-tag">未設定</span></h3>
+    <p style="color:var(--ink-soft);font-size:12.5px;margin:4px 0 10px;">
+      設定這個網址之後，<b>這份 Google 試算表就是系統唯一的正式資料來源</b>：費率表、接水費、服務費、每一筆案件，
+      都會同一份試算表裡的 Rates／Conn／Config／Cases 四個分頁。試算表會自動放在跟 Apps Script 專案「同一個 Drive 資料夾」，方便找、也方便您用樞紐分析表做更彈性的分析。
+      本系統另外還會存一份本機共用快取（離線或尚未設定試算表時使用），但只要試算表設定成功，畫面上看到的都會是試算表裡的資料。
+      第一次設定請點右邊「下載部署說明＋程式碼」取得最新版 Apps Script，依照裡面的步驟部署後，把產生的網址貼在下面。
+      <br>💡 <b>怕同仁懶得自己貼網址？</b> 部署者可以打開這份 HTML 檔案原始碼，把網址直接寫進 <code>DEFAULT_GAS_URL</code> 常數裡再發送出去，這樣同仁打開檔案就會自動接上，不用手動設定；下面欄位仍可讓個人另外覆蓋。
+    </p>
+    <div class="grid g2">
+      <div class="field"><label>Google Apps Script Web App URL</label>
+        <input id="gas-url" placeholder="https://script.google.com/macros/s/xxxx/exec" onchange="saveGasUrl(this.value)">
+      </div>
+      <div class="field" style="align-self:flex-end;">
+        <div class="row-actions" style="margin-top:0;">
+          <button class="btn secondary" onclick="testGasConnection()">測試連線</button>
+          <button class="btn secondary" onclick="syncAllCasesToSheet()">立即同步全部案件到 Sheet</button>
+          <button class="btn ghost" onclick="downloadGasScript()">下載部署說明＋程式碼</button>
+        </div>
+      </div>
+    </div>
+    <p id="gas-msg" style="font-size:12px;color:var(--ink-soft);margin-top:6px;"></p>
+  </div>
+
+  <div class="card">
+    <h3>匯入／匯出</h3>
+    <div class="row-actions">
+      <button class="btn secondary" onclick="downloadTemplate()">下載 CSV 範本（含目前資料）</button>
+      <label class="btn secondary" style="cursor:pointer;">
+        上傳 CSV／Excel 覆蓋匯入
+        <input type="file" id="rate-upload" accept=".csv,.xlsx,.xls" style="display:none" onchange="handleRateUpload(event)">
+      </label>
+      <button class="btn ghost" onclick="if(confirm('確定要還原成系統內建的種子費率嗎？此動作會覆蓋目前雲端的費率資料。')) resetRates()">還原為內建種子費率</button>
+    </div>
+    <div class="grid g2" style="margin-top:14px;">
+      <div class="field"><label>新版服務費（每顆表，元）</label><input type="number" id="svc-new" onchange="updateServiceFee('new',this.value)"></div>
+      <div class="field"><label>舊版服務費（每顆表，元）</label><input type="number" id="svc-old" onchange="updateServiceFee('old',this.value)"></div>
+    </div>
+  </div>
+
+  <div class="card">
+    <h3>逐項費率 <span class="tag" id="rate-count-tag"></span></h3>
+    <div class="row-actions" style="margin-bottom:10px;">
+      <button class="add-btn" onclick="addRateRow()">＋ 新增一列費率</button>
+    </div>
+    <div class="rate-scroll">
+      <table class="rate-table" id="rate-table">
+        <thead><tr>
+          <th>版本</th><th>管材</th><th>口徑類型</th><th>口徑(mm)</th><th>項目</th><th style="text-align:right">金額(元)</th><th>狀態</th><th></th>
+        </tr></thead>
+        <tbody id="rate-tbody"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <div class="card">
+    <h3>接水費（依口徑，新舊版費率一致，總表不收）</h3>
+    <div class="rate-scroll" style="max-height:280px;">
+      <table class="rate-table" id="conn-table">
+        <thead><tr><th>口徑(mm)</th><th style="text-align:right">接水費(元)</th><th>狀態</th><th></th></tr></thead>
+        <tbody id="conn-tbody"></tbody>
+      </table>
+    </div>
+    <button class="add-btn" style="margin-top:8px;" onclick="addConnRow()">＋ 新增口徑</button>
+  </div>
+</section>
+
+<!-- ===================== TAB 3: ANALYSIS ===================== -->
+<section class="panel" id="panel-analysis">
+  <div class="notice info">下方是所有已存檔案件的完整清單（跨單位、跨使用者共用，即時讀取雲端試算表）。預設顯示每一筆案件的時間／單位／建案／地址／新舊版金額／差異，方便用瀏覽器內建搜尋或匯出成 Excel 後自行用樞紐分析、篩選。需要系統先幫忙分組彙總的話，可以展開下方「分組彙總（選用）」。</div>
+
+  <div class="filters">
+    <div class="field" style="flex:1.4;min-width:220px;"><label>搜尋（單位／案號／建案名稱／地址）</label><input type="text" id="flt-search" placeholder="輸入關鍵字…" oninput="renderAnalysis()"></div>
+    <div class="field"><label>單位篩選</label><select id="flt-unit" onchange="renderAnalysis()"><option value="">全部</option></select></div>
+    <div class="field"><label>類型篩選</label>
+      <select id="flt-type" onchange="renderAnalysis()"><option value="">全部</option><option value="集合住宅">集合住宅</option><option value="獨立戶">獨立戶</option></select>
+    </div>
+    <div class="field"><label>起始日期</label><input type="date" id="flt-from" onchange="renderAnalysis()"></div>
+    <div class="field"><label>結束日期</label><input type="date" id="flt-to" onchange="renderAnalysis()"></div>
+    <div class="field" style="align-self:flex-end;"><button class="btn ghost" onclick="reloadCases()">重新整理</button></div>
+    <div class="field" style="align-self:flex-end;"><button class="btn secondary" onclick="exportAnalysisExcel()">下載 Excel（完整案件清單）</button></div>
+  </div>
+
+  <div class="card" id="analysis-summary"></div>
+
+  <div class="card">
+    <h3>案件清單（全部欄位，點欄名可排序）</h3>
+    <div class="rate-scroll" style="max-height:560px;">
+      <table class="agg-table" id="flat-table">
+        <thead><tr>
+          <th onclick="sortFlat('date')" style="cursor:pointer;">時間 ▾</th>
+          <th onclick="sortFlat('unit')" style="cursor:pointer;">單位</th>
+          <th onclick="sortFlat('caseno')" style="cursor:pointer;">案號</th>
+          <th onclick="sortFlat('project')" style="cursor:pointer;">建案名稱</th>
+          <th onclick="sortFlat('address')" style="cursor:pointer;">地址</th>
+          <th>類型</th>
+          <th class="num">表數</th>
+          <th class="num" onclick="sortFlat('newTotal')" style="cursor:pointer;">新版金額 ▾</th>
+          <th class="num" onclick="sortFlat('oldTotal')" style="cursor:pointer;">舊版金額 ▾</th>
+          <th class="num" onclick="sortFlat('diff')" style="cursor:pointer;">差額(新−舊) ▾</th>
+          <th class="num">差異%</th>
+          <th></th>
+        </tr></thead>
+        <tbody id="flat-tbody"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <details class="card">
+    <summary style="cursor:pointer;font-weight:700;">分組彙總（選用，需要系統先幫忙依單位／類型／月份分組加總時再展開）</summary>
+    <div class="filters" style="margin-top:12px;">
+      <div class="field"><label>依欄位分組</label>
+        <select id="grp-by" onchange="renderAnalysis()">
+          <option value="unit">單位名稱</option>
+          <option value="type">案件類型</option>
+          <option value="month">建立月份</option>
+        </select>
+      </div>
+    </div>
+    <table class="agg-table" id="agg-table">
+      <thead><tr><th>分組</th><th class="num">案件數</th><th class="num">新版總額</th><th class="num">舊版總額</th><th class="num">差額(新−舊)</th><th class="num">平均差異%</th></tr></thead>
+      <tbody id="agg-tbody"></tbody>
+    </table>
+  </details>
+</section>
+
+
+</main>
+
+<footer class="status">
+  <span id="status-left">初始化中…</span>
+  <span id="status-right"></span>
+</footer>
+
+<script>
+/* ============================================================
+   常數 & 種子資料
+   ============================================================ */
+/* ============================================================
+   儲存層相容包裝：window.storage 只在 Claude.ai 的 Artifact 畫面裡才存在。
+   如果這個檔案是被下載後直接用瀏覽器開啟（file:// 或一般網頁伺服器），
+   window.storage 會是 undefined，此時自動改用瀏覽器自己的 localStorage
+   （只存在「這一台電腦、這個瀏覽器」，不會多人共用——多人共用請務必設定
+   「費率管理」頁的 Google 試算表網址，那才是真正跨裝置共用的地方）。
+   ============================================================ */
+function hasCloudStorage_(){
+  return typeof window !== 'undefined' && !!window.storage && typeof window.storage.get === 'function';
+}
+const LS_PREFIX_ = 'wsim2_';
+async function storageGet(key, shared){
+  if(hasCloudStorage_()){
+    try{ return await window.storage.get(key, shared); }catch(e){ /* 掉下去用 localStorage */ }
+  }
+  const raw = window.localStorage ? window.localStorage.getItem(LS_PREFIX_+key) : null;
+  if(raw===null || raw===undefined) throw new Error('key not found: '+key);
+  return {key, value:raw, shared:!!shared};
+}
+async function storageSet(key, value, shared){
+  if(hasCloudStorage_()){
+    try{ return await window.storage.set(key, value, shared); }catch(e){ /* 掉下去用 localStorage */ }
+  }
+  if(window.localStorage) window.localStorage.setItem(LS_PREFIX_+key, value);
+  return {key, value, shared:!!shared};
+}
+async function storageList(prefix, shared){
+  if(hasCloudStorage_()){
+    try{ return await window.storage.list(prefix, shared); }catch(e){ /* 掉下去用 localStorage */ }
+  }
+  const keys = [];
+  if(window.localStorage){
+    for(let i=0;i<window.localStorage.length;i++){
+      const k = window.localStorage.key(i);
+      if(k && k.indexOf(LS_PREFIX_)===0){
+        const bare = k.slice(LS_PREFIX_.length);
+        if(!prefix || bare.indexOf(prefix)===0) keys.push(bare);
+      }
+    }
+  }
+  return {keys, prefix, shared:!!shared};
+}
+async function storageDelete(key, shared){
+  if(hasCloudStorage_()){
+    try{ return await window.storage.delete(key, shared); }catch(e){ /* 掉下去用 localStorage */ }
+  }
+  if(window.localStorage) window.localStorage.removeItem(LS_PREFIX_+key);
+  return {key, deleted:true, shared:!!shared};
+}
+
+const CALIBERS = [13,20,25,40,50,80,100,150,200,250,300,350,400,450,500,600];
+const MATERIALS = ['SSP','DIP','PEP','PVCP','HDPEP','HIWP'];
+const MATERIAL_LABEL = {SSP:'不鏽鋼波狀管(SSP)',DIP:'延性石墨鑄鐵管(DIP)',PEP:'聚乙烯管(PEP)',PVCP:'硬質聚氯乙烯管(PVCP)',HDPEP:'高密度聚乙烯管(HDPEP)',HIWP:'耐衝擊硬質聚氯乙烯管(HIWP)'};
+const ITEMS = ['接水處','水表組_平面','水表組_立式','基本4公尺工料費','每增加1公尺工料費','裝表費_自備','裝表費_供料'];
+const POSITION_MAX_CALIBER = 50; // 超過此口徑不分平面/立式
+const TABLE_TYPES = {main:'總表', indep:'獨立表/公共表', sub:'分表'};
+const SEED_VERSION = '2026-08-11d'; // 內建費率版本號：每次我更新 seedRates()/seedConn() 就改這個字串（本次修正：裝表費80mm以上欄位錯位）
+let seedOutdated = false; // 雲端已存的費率版本 與 目前程式碼內建版本 不一致時設為 true
+
+let rowCounter = 0;
+const state = { main:[], indep:[], sub:[] };
+
+// key helper: version|material|kind(pipe/meter)|caliber|item
+function rk(v,m,k,c,i){ return [v,m,k,c,i].join('|'); }
+
+const SEED_RATES_DATA = [{"version":"new","material":"SSP","kind":"pipe","caliber":13,"item":"接水處","value":0,"verified":1},{"version":"new","material":"SSP","kind":"pipe","caliber":13,"item":"基本4公尺工料費","value":0,"verified":1},{"version":"new","material":"SSP","kind":"pipe","caliber":13,"item":"每增加1公尺工料費","value":0,"verified":1},{"version":"new","material":"SSP","kind":"meter","caliber":13,"item":"水表組_平面","value":0,"verified":1},{"version":"new","material":"SSP","kind":"meter","caliber":13,"item":"水表組_立式","value":0,"verified":1},{"version":"new","material":"SSP","kind":"pipe","caliber":20,"item":"接水處","value":9814,"verified":1},{"version":"new","material":"SSP","kind":"pipe","caliber":20,"item":"基本4公尺工料費","value":15110,"verified":1},{"version":"new","material":"SSP","kind":"pipe","caliber":20,"item":"每增加1公尺工料費","value":3749,"verified":1},{"version":"new","material":"SSP","kind":"meter","caliber":20,"item":"水表組_平面","value":3136,"verified":1},{"version":"new","material":"SSP","kind":"meter","caliber":20,"item":"水表組_立式","value":3437,"verified":1},{"version":"new","material":"SSP","kind":"pipe","caliber":25,"item":"接水處","value":10114,"verified":1},{"version":"new","material":"SSP","kind":"pipe","caliber":25,"item":"基本4公尺工料費","value":16208,"verified":1},{"version":"new","material":"SSP","kind":"pipe","caliber":25,"item":"每增加1公尺工料費","value":3991,"verified":1},{"version":"new","material":"SSP","kind":"meter","caliber":25,"item":"水表組_平面","value":4306,"verified":1},{"version":"new","material":"SSP","kind":"meter","caliber":25,"item":"水表組_立式","value":4578,"verified":1},{"version":"new","material":"SSP","kind":"pipe","caliber":40,"item":"接水處","value":12553,"verified":1},{"version":"new","material":"SSP","kind":"pipe","caliber":40,"item":"基本4公尺工料費","value":18214,"verified":1},{"version":"new","material":"SSP","kind":"pipe","caliber":40,"item":"每增加1公尺工料費","value":4550,"verified":1},{"version":"new","material":"SSP","kind":"meter","caliber":40,"item":"水表組_平面","value":8507,"verified":1},{"version":"new","material":"SSP","kind":"meter","caliber":40,"item":"水表組_立式","value":8512,"verified":1},{"version":"new","material":"SSP","kind":"pipe","caliber":50,"item":"接水處","value":22972,"verified":1},{"version":"new","material":"SSP","kind":"pipe","caliber":50,"item":"基本4公尺工料費","value":29108,"verified":1},{"version":"new","material":"SSP","kind":"pipe","caliber":50,"item":"每增加1公尺工料費","value":7157,"verified":1},{"version":"new","material":"SSP","kind":"meter","caliber":50,"item":"水表組_平面","value":70135,"verified":1},{"version":"new","material":"SSP","kind":"meter","caliber":50,"item":"水表組_立式","value":0,"verified":1},{"version":"new","material":"SSP","kind":"pipe","caliber":80,"item":"接水處","value":0,"verified":1},{"version":"new","material":"SSP","kind":"pipe","caliber":80,"item":"基本4公尺工料費","value":0,"verified":1},{"version":"new","material":"SSP","kind":"pipe","caliber":80,"item":"每增加1公尺工料費","value":0,"verified":1},{"version":"new","material":"SSP","kind":"meter","caliber":80,"item":"水表組_平面","value":0,"verified":1},{"version":"new","material":"SSP","kind":"meter","caliber":80,"item":"水表組_立式","value":0,"verified":1},{"version":"new","material":"SSP","kind":"pipe","caliber":100,"item":"接水處","value":0,"verified":1},{"version":"new","material":"SSP","kind":"pipe","caliber":100,"item":"基本4公尺工料費","value":0,"verified":1},{"version":"new","material":"SSP","kind":"pipe","caliber":100,"item":"每增加1公尺工料費","value":0,"verified":1},{"version":"new","material":"SSP","kind":"meter","caliber":100,"item":"水表組_平面","value":0,"verified":1},{"version":"new","material":"SSP","kind":"meter","caliber":100,"item":"水表組_立式","value":0,"verified":1},{"version":"new","material":"SSP","kind":"pipe","caliber":150,"item":"接水處","value":0,"verified":1},{"version":"new","material":"SSP","kind":"pipe","caliber":150,"item":"基本4公尺工料費","value":0,"verified":1},{"version":"new","material":"SSP","kind":"pipe","caliber":150,"item":"每增加1公尺工料費","value":0,"verified":1},{"version":"new","material":"SSP","kind":"meter","caliber":150,"item":"水表組_平面","value":0,"verified":1},{"version":"new","material":"SSP","kind":"meter","caliber":150,"item":"水表組_立式","value":0,"verified":1},{"version":"new","material":"SSP","kind":"pipe","caliber":200,"item":"接水處","value":0,"verified":1},{"version":"new","material":"SSP","kind":"pipe","caliber":200,"item":"基本4公尺工料費","value":0,"verified":1},{"version":"new","material":"SSP","kind":"pipe","caliber":200,"item":"每增加1公尺工料費","value":0,"verified":1},{"version":"new","material":"SSP","kind":"meter","caliber":200,"item":"水表組_平面","value":0,"verified":1},{"version":"new","material":"SSP","kind":"meter","caliber":200,"item":"水表組_立式","value":0,"verified":1},{"version":"new","material":"SSP","kind":"pipe","caliber":250,"item":"接水處","value":0,"verified":1},{"version":"new","material":"SSP","kind":"pipe","caliber":250,"item":"基本4公尺工料費","value":0,"verified":1},{"version":"new","material":"SSP","kind":"pipe","caliber":250,"item":"每增加1公尺工料費","value":0,"verified":1},{"version":"new","material":"SSP","kind":"meter","caliber":250,"item":"水表組_平面","value":0,"verified":1},{"version":"new","material":"SSP","kind":"meter","caliber":250,"item":"水表組_立式","value":0,"verified":1},{"version":"new","material":"SSP","kind":"pipe","caliber":300,"item":"接水處","value":0,"verified":1},{"version":"new","material":"SSP","kind":"pipe","caliber":300,"item":"基本4公尺工料費","value":0,"verified":1},{"version":"new","material":"SSP","kind":"pipe","caliber":300,"item":"每增加1公尺工料費","value":0,"verified":1},{"version":"new","material":"SSP","kind":"meter","caliber":300,"item":"水表組_平面","value":0,"verified":1},{"version":"new","material":"SSP","kind":"meter","caliber":300,"item":"水表組_立式","value":0,"verified":1},{"version":"new","material":"SSP","kind":"pipe","caliber":350,"item":"接水處","value":0,"verified":1},{"version":"new","material":"SSP","kind":"pipe","caliber":350,"item":"基本4公尺工料費","value":0,"verified":1},{"version":"new","material":"SSP","kind":"pipe","caliber":350,"item":"每增加1公尺工料費","value":0,"verified":1},{"version":"new","material":"SSP","kind":"meter","caliber":350,"item":"水表組_平面","value":0,"verified":1},{"version":"new","material":"SSP","kind":"meter","caliber":350,"item":"水表組_立式","value":0,"verified":1},{"version":"new","material":"SSP","kind":"pipe","caliber":400,"item":"接水處","value":0,"verified":1},{"version":"new","material":"SSP","kind":"pipe","caliber":400,"item":"基本4公尺工料費","value":0,"verified":1},{"version":"new","material":"SSP","kind":"pipe","caliber":400,"item":"每增加1公尺工料費","value":0,"verified":1},{"version":"new","material":"SSP","kind":"meter","caliber":400,"item":"水表組_平面","value":0,"verified":1},{"version":"new","material":"SSP","kind":"meter","caliber":400,"item":"水表組_立式","value":0,"verified":1},{"version":"new","material":"SSP","kind":"pipe","caliber":450,"item":"接水處","value":0,"verified":1},{"version":"new","material":"SSP","kind":"pipe","caliber":450,"item":"基本4公尺工料費","value":0,"verified":1},{"version":"new","material":"SSP","kind":"pipe","caliber":450,"item":"每增加1公尺工料費","value":0,"verified":1},{"version":"new","material":"SSP","kind":"meter","caliber":450,"item":"水表組_平面","value":0,"verified":1},{"version":"new","material":"SSP","kind":"meter","caliber":450,"item":"水表組_立式","value":0,"verified":1},{"version":"new","material":"SSP","kind":"pipe","caliber":500,"item":"接水處","value":0,"verified":1},{"version":"new","material":"SSP","kind":"pipe","caliber":500,"item":"基本4公尺工料費","value":0,"verified":1},{"version":"new","material":"SSP","kind":"pipe","caliber":500,"item":"每增加1公尺工料費","value":0,"verified":1},{"version":"new","material":"SSP","kind":"meter","caliber":500,"item":"水表組_平面","value":0,"verified":1},{"version":"new","material":"SSP","kind":"meter","caliber":500,"item":"水表組_立式","value":0,"verified":1},{"version":"new","material":"SSP","kind":"pipe","caliber":600,"item":"接水處","value":0,"verified":1},{"version":"new","material":"SSP","kind":"pipe","caliber":600,"item":"基本4公尺工料費","value":0,"verified":1},{"version":"new","material":"SSP","kind":"pipe","caliber":600,"item":"每增加1公尺工料費","value":0,"verified":1},{"version":"new","material":"SSP","kind":"meter","caliber":600,"item":"水表組_平面","value":0,"verified":1},{"version":"new","material":"SSP","kind":"meter","caliber":600,"item":"水表組_立式","value":0,"verified":1},{"version":"new","material":"HDPEP","kind":"pipe","caliber":13,"item":"接水處","value":0,"verified":1},{"version":"new","material":"HDPEP","kind":"pipe","caliber":13,"item":"基本4公尺工料費","value":0,"verified":1},{"version":"new","material":"HDPEP","kind":"pipe","caliber":13,"item":"每增加1公尺工料費","value":0,"verified":1},{"version":"new","material":"HDPEP","kind":"meter","caliber":13,"item":"水表組_平面","value":0,"verified":1},{"version":"new","material":"HDPEP","kind":"meter","caliber":13,"item":"水表組_立式","value":0,"verified":1},{"version":"new","material":"HDPEP","kind":"pipe","caliber":20,"item":"接水處","value":22606,"verified":1},{"version":"new","material":"HDPEP","kind":"pipe","caliber":20,"item":"基本4公尺工料費","value":19186,"verified":1},{"version":"new","material":"HDPEP","kind":"pipe","caliber":20,"item":"每增加1公尺工料費","value":4359,"verified":1},{"version":"new","material":"HDPEP","kind":"meter","caliber":20,"item":"水表組_平面","value":3136,"verified":1},{"version":"new","material":"HDPEP","kind":"meter","caliber":20,"item":"水表組_立式","value":3437,"verified":1},{"version":"new","material":"HDPEP","kind":"pipe","caliber":25,"item":"接水處","value":23639,"verified":1},{"version":"new","material":"HDPEP","kind":"pipe","caliber":25,"item":"基本4公尺工料費","value":19877,"verified":1},{"version":"new","material":"HDPEP","kind":"pipe","caliber":25,"item":"每增加1公尺工料費","value":4393,"verified":1},{"version":"new","material":"HDPEP","kind":"meter","caliber":25,"item":"水表組_平面","value":4306,"verified":1},{"version":"new","material":"HDPEP","kind":"meter","caliber":25,"item":"水表組_立式","value":4578,"verified":1},{"version":"new","material":"HDPEP","kind":"pipe","caliber":40,"item":"接水處","value":25022,"verified":1},{"version":"new","material":"HDPEP","kind":"pipe","caliber":40,"item":"基本4公尺工料費","value":23803,"verified":1},{"version":"new","material":"HDPEP","kind":"pipe","caliber":40,"item":"每增加1公尺工料費","value":4512,"verified":1},{"version":"new","material":"HDPEP","kind":"meter","caliber":40,"item":"水表組_平面","value":8507,"verified":1},{"version":"new","material":"HDPEP","kind":"meter","caliber":40,"item":"水表組_立式","value":8512,"verified":1},{"version":"new","material":"HDPEP","kind":"pipe","caliber":50,"item":"接水處","value":29073,"verified":1},{"version":"new","material":"HDPEP","kind":"pipe","caliber":50,"item":"基本4公尺工料費","value":25038,"verified":1},{"version":"new","material":"HDPEP","kind":"pipe","caliber":50,"item":"每增加1公尺工料費","value":4638,"verified":1},{"version":"new","material":"HDPEP","kind":"meter","caliber":50,"item":"水表組_平面","value":64035,"verified":1},{"version":"new","material":"HDPEP","kind":"meter","caliber":50,"item":"水表組_立式","value":0,"verified":1},{"version":"new","material":"HDPEP","kind":"pipe","caliber":80,"item":"接水處","value":0,"verified":1},{"version":"new","material":"HDPEP","kind":"pipe","caliber":80,"item":"基本4公尺工料費","value":0,"verified":1},{"version":"new","material":"HDPEP","kind":"pipe","caliber":80,"item":"每增加1公尺工料費","value":0,"verified":1},{"version":"new","material":"HDPEP","kind":"meter","caliber":80,"item":"水表組_平面","value":0,"verified":1},{"version":"new","material":"HDPEP","kind":"meter","caliber":80,"item":"水表組_立式","value":0,"verified":1},{"version":"new","material":"HDPEP","kind":"pipe","caliber":100,"item":"接水處","value":0,"verified":1},{"version":"new","material":"HDPEP","kind":"pipe","caliber":100,"item":"基本4公尺工料費","value":0,"verified":1},{"version":"new","material":"HDPEP","kind":"pipe","caliber":100,"item":"每增加1公尺工料費","value":0,"verified":1},{"version":"new","material":"HDPEP","kind":"meter","caliber":100,"item":"水表組_平面","value":0,"verified":1},{"version":"new","material":"HDPEP","kind":"meter","caliber":100,"item":"水表組_立式","value":0,"verified":1},{"version":"new","material":"HDPEP","kind":"pipe","caliber":150,"item":"接水處","value":0,"verified":1},{"version":"new","material":"HDPEP","kind":"pipe","caliber":150,"item":"基本4公尺工料費","value":0,"verified":1},{"version":"new","material":"HDPEP","kind":"pipe","caliber":150,"item":"每增加1公尺工料費","value":0,"verified":1},{"version":"new","material":"HDPEP","kind":"meter","caliber":150,"item":"水表組_平面","value":0,"verified":1},{"version":"new","material":"HDPEP","kind":"meter","caliber":150,"item":"水表組_立式","value":0,"verified":1},{"version":"new","material":"HDPEP","kind":"pipe","caliber":200,"item":"接水處","value":0,"verified":1},{"version":"new","material":"HDPEP","kind":"pipe","caliber":200,"item":"基本4公尺工料費","value":0,"verified":1},{"version":"new","material":"HDPEP","kind":"pipe","caliber":200,"item":"每增加1公尺工料費","value":0,"verified":1},{"version":"new","material":"HDPEP","kind":"meter","caliber":200,"item":"水表組_平面","value":0,"verified":1},{"version":"new","material":"HDPEP","kind":"meter","caliber":200,"item":"水表組_立式","value":0,"verified":1},{"version":"new","material":"HDPEP","kind":"pipe","caliber":250,"item":"接水處","value":0,"verified":1},{"version":"new","material":"HDPEP","kind":"pipe","caliber":250,"item":"基本4公尺工料費","value":0,"verified":1},{"version":"new","material":"HDPEP","kind":"pipe","caliber":250,"item":"每增加1公尺工料費","value":0,"verified":1},{"version":"new","material":"HDPEP","kind":"meter","caliber":250,"item":"水表組_平面","value":0,"verified":1},{"version":"new","material":"HDPEP","kind":"meter","caliber":250,"item":"水表組_立式","value":0,"verified":1},{"version":"new","material":"HDPEP","kind":"pipe","caliber":300,"item":"接水處","value":0,"verified":1},{"version":"new","material":"HDPEP","kind":"pipe","caliber":300,"item":"基本4公尺工料費","value":0,"verified":1},{"version":"new","material":"HDPEP","kind":"pipe","caliber":300,"item":"每增加1公尺工料費","value":0,"verified":1},{"version":"new","material":"HDPEP","kind":"meter","caliber":300,"item":"水表組_平面","value":0,"verified":1},{"version":"new","material":"HDPEP","kind":"meter","caliber":300,"item":"水表組_立式","value":0,"verified":1},{"version":"new","material":"HDPEP","kind":"pipe","caliber":350,"item":"接水處","value":0,"verified":1},{"version":"new","material":"HDPEP","kind":"pipe","caliber":350,"item":"基本4公尺工料費","value":0,"verified":1},{"version":"new","material":"HDPEP","kind":"pipe","caliber":350,"item":"每增加1公尺工料費","value":0,"verified":1},{"version":"new","material":"HDPEP","kind":"meter","caliber":350,"item":"水表組_平面","value":0,"verified":1},{"version":"new","material":"HDPEP","kind":"meter","caliber":350,"item":"水表組_立式","value":0,"verified":1},{"version":"new","material":"HDPEP","kind":"pipe","caliber":400,"item":"接水處","value":0,"verified":1},{"version":"new","material":"HDPEP","kind":"pipe","caliber":400,"item":"基本4公尺工料費","value":0,"verified":1},{"version":"new","material":"HDPEP","kind":"pipe","caliber":400,"item":"每增加1公尺工料費","value":0,"verified":1},{"version":"new","material":"HDPEP","kind":"meter","caliber":400,"item":"水表組_平面","value":0,"verified":1},{"version":"new","material":"HDPEP","kind":"meter","caliber":400,"item":"水表組_立式","value":0,"verified":1},{"version":"new","material":"HDPEP","kind":"pipe","caliber":450,"item":"接水處","value":0,"verified":1},{"version":"new","material":"HDPEP","kind":"pipe","caliber":450,"item":"基本4公尺工料費","value":0,"verified":1},{"version":"new","material":"HDPEP","kind":"pipe","caliber":450,"item":"每增加1公尺工料費","value":0,"verified":1},{"version":"new","material":"HDPEP","kind":"meter","caliber":450,"item":"水表組_平面","value":0,"verified":1},{"version":"new","material":"HDPEP","kind":"meter","caliber":450,"item":"水表組_立式","value":0,"verified":1},{"version":"new","material":"HDPEP","kind":"pipe","caliber":500,"item":"接水處","value":0,"verified":1},{"version":"new","material":"HDPEP","kind":"pipe","caliber":500,"item":"基本4公尺工料費","value":0,"verified":1},{"version":"new","material":"HDPEP","kind":"pipe","caliber":500,"item":"每增加1公尺工料費","value":0,"verified":1},{"version":"new","material":"HDPEP","kind":"meter","caliber":500,"item":"水表組_平面","value":0,"verified":1},{"version":"new","material":"HDPEP","kind":"meter","caliber":500,"item":"水表組_立式","value":0,"verified":1},{"version":"new","material":"HDPEP","kind":"pipe","caliber":600,"item":"接水處","value":0,"verified":1},{"version":"new","material":"HDPEP","kind":"pipe","caliber":600,"item":"基本4公尺工料費","value":0,"verified":1},{"version":"new","material":"HDPEP","kind":"pipe","caliber":600,"item":"每增加1公尺工料費","value":0,"verified":1},{"version":"new","material":"HDPEP","kind":"meter","caliber":600,"item":"水表組_平面","value":0,"verified":1},{"version":"new","material":"HDPEP","kind":"meter","caliber":600,"item":"水表組_立式","value":0,"verified":1},{"version":"new","material":"DIP","kind":"pipe","caliber":13,"item":"接水處","value":0,"verified":1},{"version":"new","material":"DIP","kind":"pipe","caliber":13,"item":"基本4公尺工料費","value":0,"verified":1},{"version":"new","material":"DIP","kind":"pipe","caliber":13,"item":"每增加1公尺工料費","value":0,"verified":1},{"version":"new","material":"DIP","kind":"meter","caliber":13,"item":"水表組_平面","value":0,"verified":1},{"version":"new","material":"DIP","kind":"meter","caliber":13,"item":"水表組_立式","value":0,"verified":1},{"version":"new","material":"DIP","kind":"pipe","caliber":20,"item":"接水處","value":0,"verified":1},{"version":"new","material":"DIP","kind":"pipe","caliber":20,"item":"基本4公尺工料費","value":0,"verified":1},{"version":"new","material":"DIP","kind":"pipe","caliber":20,"item":"每增加1公尺工料費","value":0,"verified":1},{"version":"new","material":"DIP","kind":"meter","caliber":20,"item":"水表組_平面","value":0,"verified":1},{"version":"new","material":"DIP","kind":"meter","caliber":20,"item":"水表組_立式","value":0,"verified":1},{"version":"new","material":"DIP","kind":"pipe","caliber":25,"item":"接水處","value":0,"verified":1},{"version":"new","material":"DIP","kind":"pipe","caliber":25,"item":"基本4公尺工料費","value":0,"verified":1},{"version":"new","material":"DIP","kind":"pipe","caliber":25,"item":"每增加1公尺工料費","value":0,"verified":1},{"version":"new","material":"DIP","kind":"meter","caliber":25,"item":"水表組_平面","value":0,"verified":1},{"version":"new","material":"DIP","kind":"meter","caliber":25,"item":"水表組_立式","value":0,"verified":1},{"version":"new","material":"DIP","kind":"pipe","caliber":40,"item":"接水處","value":0,"verified":1},{"version":"new","material":"DIP","kind":"pipe","caliber":40,"item":"基本4公尺工料費","value":0,"verified":1},{"version":"new","material":"DIP","kind":"pipe","caliber":40,"item":"每增加1公尺工料費","value":0,"verified":1},{"version":"new","material":"DIP","kind":"meter","caliber":40,"item":"水表組_平面","value":0,"verified":1},{"version":"new","material":"DIP","kind":"meter","caliber":40,"item":"水表組_立式","value":0,"verified":1},{"version":"new","material":"DIP","kind":"pipe","caliber":50,"item":"接水處","value":0,"verified":1},{"version":"new","material":"DIP","kind":"pipe","caliber":50,"item":"基本4公尺工料費","value":0,"verified":1},{"version":"new","material":"DIP","kind":"pipe","caliber":50,"item":"每增加1公尺工料費","value":0,"verified":1},{"version":"new","material":"DIP","kind":"meter","caliber":50,"item":"水表組_平面","value":0,"verified":1},{"version":"new","material":"DIP","kind":"meter","caliber":50,"item":"水表組_立式","value":0,"verified":1},{"version":"new","material":"DIP","kind":"pipe","caliber":80,"item":"接水處","value":0,"verified":1},{"version":"new","material":"DIP","kind":"pipe","caliber":80,"item":"基本4公尺工料費","value":0,"verified":1},{"version":"new","material":"DIP","kind":"pipe","caliber":80,"item":"每增加1公尺工料費","value":0,"verified":1},{"version":"new","material":"DIP","kind":"meter","caliber":80,"item":"水表組_平面","value":83729,"verified":1},{"version":"new","material":"DIP","kind":"meter","caliber":80,"item":"水表組_立式","value":83729,"verified":1},{"version":"new","material":"DIP","kind":"pipe","caliber":100,"item":"接水處","value":68089,"verified":1},{"version":"new","material":"DIP","kind":"pipe","caliber":100,"item":"基本4公尺工料費","value":56247,"verified":1},{"version":"new","material":"DIP","kind":"pipe","caliber":100,"item":"每增加1公尺工料費","value":7781,"verified":1},{"version":"new","material":"DIP","kind":"meter","caliber":100,"item":"水表組_平面","value":92356,"verified":1},{"version":"new","material":"DIP","kind":"meter","caliber":100,"item":"水表組_立式","value":92356,"verified":1},{"version":"new","material":"DIP","kind":"pipe","caliber":150,"item":"接水處","value":92459,"verified":1},{"version":"new","material":"DIP","kind":"pipe","caliber":150,"item":"基本4公尺工料費","value":72189,"verified":1},{"version":"new","material":"DIP","kind":"pipe","caliber":150,"item":"每增加1公尺工料費","value":9340,"verified":1},{"version":"new","material":"DIP","kind":"meter","caliber":150,"item":"水表組_平面","value":105979,"verified":1},{"version":"new","material":"DIP","kind":"meter","caliber":150,"item":"水表組_立式","value":105979,"verified":1},{"version":"new","material":"DIP","kind":"pipe","caliber":200,"item":"接水處","value":138154,"verified":1},{"version":"new","material":"DIP","kind":"pipe","caliber":200,"item":"基本4公尺工料費","value":89262,"verified":1},{"version":"new","material":"DIP","kind":"pipe","caliber":200,"item":"每增加1公尺工料費","value":9966,"verified":1},{"version":"new","material":"DIP","kind":"meter","caliber":200,"item":"水表組_平面","value":123383,"verified":1},{"version":"new","material":"DIP","kind":"meter","caliber":200,"item":"水表組_立式","value":123383,"verified":1},{"version":"new","material":"DIP","kind":"pipe","caliber":250,"item":"接水處","value":146634,"verified":1},{"version":"new","material":"DIP","kind":"pipe","caliber":250,"item":"基本4公尺工料費","value":123909,"verified":1},{"version":"new","material":"DIP","kind":"pipe","caliber":250,"item":"每增加1公尺工料費","value":12351,"verified":1},{"version":"new","material":"DIP","kind":"meter","caliber":250,"item":"水表組_平面","value":150838,"verified":1},{"version":"new","material":"DIP","kind":"meter","caliber":250,"item":"水表組_立式","value":150838,"verified":1},{"version":"new","material":"DIP","kind":"pipe","caliber":300,"item":"接水處","value":183872,"verified":1},{"version":"new","material":"DIP","kind":"pipe","caliber":300,"item":"基本4公尺工料費","value":154596,"verified":1},{"version":"new","material":"DIP","kind":"pipe","caliber":300,"item":"每增加1公尺工料費","value":13326,"verified":1},{"version":"new","material":"DIP","kind":"meter","caliber":300,"item":"水表組_平面","value":176243,"verified":1},{"version":"new","material":"DIP","kind":"meter","caliber":300,"item":"水表組_立式","value":176243,"verified":1},{"version":"new","material":"DIP","kind":"pipe","caliber":350,"item":"接水處","value":235048,"verified":1},{"version":"new","material":"DIP","kind":"pipe","caliber":350,"item":"基本4公尺工料費","value":199945,"verified":1},{"version":"new","material":"DIP","kind":"pipe","caliber":350,"item":"每增加1公尺工料費","value":18792,"verified":1},{"version":"new","material":"DIP","kind":"meter","caliber":350,"item":"水表組_平面","value":198899,"verified":1},{"version":"new","material":"DIP","kind":"meter","caliber":350,"item":"水表組_立式","value":198899,"verified":1},{"version":"new","material":"DIP","kind":"pipe","caliber":400,"item":"接水處","value":274905,"verified":1},{"version":"new","material":"DIP","kind":"pipe","caliber":400,"item":"基本4公尺工料費","value":239950,"verified":1},{"version":"new","material":"DIP","kind":"pipe","caliber":400,"item":"每增加1公尺工料費","value":20196,"verified":1},{"version":"new","material":"DIP","kind":"meter","caliber":400,"item":"水表組_平面","value":227982,"verified":1},{"version":"new","material":"DIP","kind":"meter","caliber":400,"item":"水表組_立式","value":227982,"verified":1},{"version":"new","material":"DIP","kind":"pipe","caliber":450,"item":"接水處","value":305878,"verified":1},{"version":"new","material":"DIP","kind":"pipe","caliber":450,"item":"基本4公尺工料費","value":264975,"verified":1},{"version":"new","material":"DIP","kind":"pipe","caliber":450,"item":"每增加1公尺工料費","value":21469,"verified":1},{"version":"new","material":"DIP","kind":"meter","caliber":450,"item":"水表組_平面","value":271863,"verified":1},{"version":"new","material":"DIP","kind":"meter","caliber":450,"item":"水表組_立式","value":271863,"verified":1},{"version":"new","material":"DIP","kind":"pipe","caliber":500,"item":"接水處","value":423582,"verified":1},{"version":"new","material":"DIP","kind":"pipe","caliber":500,"item":"基本4公尺工料費","value":326159,"verified":1},{"version":"new","material":"DIP","kind":"pipe","caliber":500,"item":"每增加1公尺工料費","value":24664,"verified":1},{"version":"new","material":"DIP","kind":"meter","caliber":500,"item":"水表組_平面","value":301883,"verified":1},{"version":"new","material":"DIP","kind":"meter","caliber":500,"item":"水表組_立式","value":301883,"verified":1},{"version":"new","material":"DIP","kind":"pipe","caliber":600,"item":"接水處","value":550468,"verified":1},{"version":"new","material":"DIP","kind":"pipe","caliber":600,"item":"基本4公尺工料費","value":432284,"verified":1},{"version":"new","material":"DIP","kind":"pipe","caliber":600,"item":"每增加1公尺工料費","value":28986,"verified":1},{"version":"new","material":"DIP","kind":"meter","caliber":600,"item":"水表組_平面","value":355984,"verified":1},{"version":"new","material":"DIP","kind":"meter","caliber":600,"item":"水表組_立式","value":355984,"verified":1},{"version":"new","material":"HIWP","kind":"pipe","caliber":13,"item":"接水處","value":5693,"verified":1},{"version":"new","material":"HIWP","kind":"pipe","caliber":13,"item":"基本4公尺工料費","value":9684,"verified":1},{"version":"new","material":"HIWP","kind":"pipe","caliber":13,"item":"每增加1公尺工料費","value":2505,"verified":1},{"version":"new","material":"HIWP","kind":"meter","caliber":13,"item":"水表組_平面","value":2258,"verified":1},{"version":"new","material":"HIWP","kind":"meter","caliber":13,"item":"水表組_立式","value":3428,"verified":1},{"version":"new","material":"HIWP","kind":"pipe","caliber":20,"item":"接水處","value":6101,"verified":1},{"version":"new","material":"HIWP","kind":"pipe","caliber":20,"item":"基本4公尺工料費","value":9714,"verified":1},{"version":"new","material":"HIWP","kind":"pipe","caliber":20,"item":"每增加1公尺工料費","value":2509,"verified":1},{"version":"new","material":"HIWP","kind":"meter","caliber":20,"item":"水表組_平面","value":3136,"verified":1},{"version":"new","material":"HIWP","kind":"meter","caliber":20,"item":"水表組_立式","value":3437,"verified":1},{"version":"new","material":"HIWP","kind":"pipe","caliber":25,"item":"接水處","value":6505,"verified":1},{"version":"new","material":"HIWP","kind":"pipe","caliber":25,"item":"基本4公尺工料費","value":9848,"verified":1},{"version":"new","material":"HIWP","kind":"pipe","caliber":25,"item":"每增加1公尺工料費","value":2523,"verified":1},{"version":"new","material":"HIWP","kind":"meter","caliber":25,"item":"水表組_平面","value":4306,"verified":1},{"version":"new","material":"HIWP","kind":"meter","caliber":25,"item":"水表組_立式","value":4578,"verified":1},{"version":"new","material":"HIWP","kind":"pipe","caliber":40,"item":"接水處","value":7707,"verified":1},{"version":"new","material":"HIWP","kind":"pipe","caliber":40,"item":"基本4公尺工料費","value":10205,"verified":1},{"version":"new","material":"HIWP","kind":"pipe","caliber":40,"item":"每增加1公尺工料費","value":2562,"verified":1},{"version":"new","material":"HIWP","kind":"meter","caliber":40,"item":"水表組_平面","value":8507,"verified":1},{"version":"new","material":"HIWP","kind":"meter","caliber":40,"item":"水表組_立式","value":8512,"verified":1},{"version":"new","material":"HIWP","kind":"pipe","caliber":50,"item":"接水處","value":27995,"verified":1},{"version":"new","material":"HIWP","kind":"pipe","caliber":50,"item":"基本4公尺工料費","value":18187,"verified":1},{"version":"new","material":"HIWP","kind":"pipe","caliber":50,"item":"每增加1公尺工料費","value":4310,"verified":1},{"version":"new","material":"HIWP","kind":"meter","caliber":50,"item":"水表組_平面","value":64035,"verified":1},{"version":"new","material":"HIWP","kind":"meter","caliber":50,"item":"水表組_立式","value":0,"verified":1},{"version":"new","material":"HIWP","kind":"pipe","caliber":80,"item":"接水處","value":42984,"verified":1},{"version":"new","material":"HIWP","kind":"pipe","caliber":80,"item":"基本4公尺工料費","value":22297,"verified":1},{"version":"new","material":"HIWP","kind":"pipe","caliber":80,"item":"每增加1公尺工料費","value":4748,"verified":1},{"version":"new","material":"HIWP","kind":"meter","caliber":80,"item":"水表組_平面","value":0,"verified":1},{"version":"new","material":"HIWP","kind":"meter","caliber":80,"item":"水表組_立式","value":0,"verified":1},{"version":"new","material":"HIWP","kind":"pipe","caliber":100,"item":"接水處","value":50445,"verified":1},{"version":"new","material":"HIWP","kind":"pipe","caliber":100,"item":"基本4公尺工料費","value":24317,"verified":1},{"version":"new","material":"HIWP","kind":"pipe","caliber":100,"item":"每增加1公尺工料費","value":5032,"verified":1},{"version":"new","material":"HIWP","kind":"meter","caliber":100,"item":"水表組_平面","value":0,"verified":1},{"version":"new","material":"HIWP","kind":"meter","caliber":100,"item":"水表組_立式","value":0,"verified":1},{"version":"new","material":"HIWP","kind":"pipe","caliber":150,"item":"接水處","value":68815,"verified":1},{"version":"new","material":"HIWP","kind":"pipe","caliber":150,"item":"基本4公尺工料費","value":28670,"verified":1},{"version":"new","material":"HIWP","kind":"pipe","caliber":150,"item":"每增加1公尺工料費","value":5607,"verified":1},{"version":"new","material":"HIWP","kind":"meter","caliber":150,"item":"水表組_平面","value":0,"verified":1},{"version":"new","material":"HIWP","kind":"meter","caliber":150,"item":"水表組_立式","value":0,"verified":1},{"version":"new","material":"HIWP","kind":"pipe","caliber":200,"item":"接水處","value":84864,"verified":1},{"version":"new","material":"HIWP","kind":"pipe","caliber":200,"item":"基本4公尺工料費","value":34882,"verified":1},{"version":"new","material":"HIWP","kind":"pipe","caliber":200,"item":"每增加1公尺工料費","value":6543,"verified":1},{"version":"new","material":"HIWP","kind":"meter","caliber":200,"item":"水表組_平面","value":0,"verified":1},{"version":"new","material":"HIWP","kind":"meter","caliber":200,"item":"水表組_立式","value":0,"verified":1},{"version":"new","material":"HIWP","kind":"pipe","caliber":250,"item":"接水處","value":0,"verified":1},{"version":"new","material":"HIWP","kind":"pipe","caliber":250,"item":"基本4公尺工料費","value":0,"verified":1},{"version":"new","material":"HIWP","kind":"pipe","caliber":250,"item":"每增加1公尺工料費","value":0,"verified":1},{"version":"new","material":"HIWP","kind":"meter","caliber":250,"item":"水表組_平面","value":0,"verified":1},{"version":"new","material":"HIWP","kind":"meter","caliber":250,"item":"水表組_立式","value":0,"verified":1},{"version":"new","material":"HIWP","kind":"pipe","caliber":300,"item":"接水處","value":0,"verified":1},{"version":"new","material":"HIWP","kind":"pipe","caliber":300,"item":"基本4公尺工料費","value":0,"verified":1},{"version":"new","material":"HIWP","kind":"pipe","caliber":300,"item":"每增加1公尺工料費","value":0,"verified":1},{"version":"new","material":"HIWP","kind":"meter","caliber":300,"item":"水表組_平面","value":0,"verified":1},{"version":"new","material":"HIWP","kind":"meter","caliber":300,"item":"水表組_立式","value":0,"verified":1},{"version":"new","material":"HIWP","kind":"pipe","caliber":350,"item":"接水處","value":0,"verified":1},{"version":"new","material":"HIWP","kind":"pipe","caliber":350,"item":"基本4公尺工料費","value":0,"verified":1},{"version":"new","material":"HIWP","kind":"pipe","caliber":350,"item":"每增加1公尺工料費","value":0,"verified":1},{"version":"new","material":"HIWP","kind":"meter","caliber":350,"item":"水表組_平面","value":0,"verified":1},{"version":"new","material":"HIWP","kind":"meter","caliber":350,"item":"水表組_立式","value":0,"verified":1},{"version":"new","material":"HIWP","kind":"pipe","caliber":400,"item":"接水處","value":0,"verified":1},{"version":"new","material":"HIWP","kind":"pipe","caliber":400,"item":"基本4公尺工料費","value":0,"verified":1},{"version":"new","material":"HIWP","kind":"pipe","caliber":400,"item":"每增加1公尺工料費","value":0,"verified":1},{"version":"new","material":"HIWP","kind":"meter","caliber":400,"item":"水表組_平面","value":0,"verified":1},{"version":"new","material":"HIWP","kind":"meter","caliber":400,"item":"水表組_立式","value":0,"verified":1},{"version":"new","material":"HIWP","kind":"pipe","caliber":450,"item":"接水處","value":0,"verified":1},{"version":"new","material":"HIWP","kind":"pipe","caliber":450,"item":"基本4公尺工料費","value":0,"verified":1},{"version":"new","material":"HIWP","kind":"pipe","caliber":450,"item":"每增加1公尺工料費","value":0,"verified":1},{"version":"new","material":"HIWP","kind":"meter","caliber":450,"item":"水表組_平面","value":0,"verified":1},{"version":"new","material":"HIWP","kind":"meter","caliber":450,"item":"水表組_立式","value":0,"verified":1},{"version":"new","material":"HIWP","kind":"pipe","caliber":500,"item":"接水處","value":0,"verified":1},{"version":"new","material":"HIWP","kind":"pipe","caliber":500,"item":"基本4公尺工料費","value":0,"verified":1},{"version":"new","material":"HIWP","kind":"pipe","caliber":500,"item":"每增加1公尺工料費","value":0,"verified":1},{"version":"new","material":"HIWP","kind":"meter","caliber":500,"item":"水表組_平面","value":0,"verified":1},{"version":"new","material":"HIWP","kind":"meter","caliber":500,"item":"水表組_立式","value":0,"verified":1},{"version":"new","material":"HIWP","kind":"pipe","caliber":600,"item":"接水處","value":0,"verified":1},{"version":"new","material":"HIWP","kind":"pipe","caliber":600,"item":"基本4公尺工料費","value":0,"verified":1},{"version":"new","material":"HIWP","kind":"pipe","caliber":600,"item":"每增加1公尺工料費","value":0,"verified":1},{"version":"new","material":"HIWP","kind":"meter","caliber":600,"item":"水表組_平面","value":0,"verified":1},{"version":"new","material":"HIWP","kind":"meter","caliber":600,"item":"水表組_立式","value":0,"verified":1},{"version":"new","material":"SSP","kind":"pipe","caliber":13,"item":"裝表費_自備","value":1268,"verified":1},{"version":"new","material":"SSP","kind":"pipe","caliber":13,"item":"裝表費_供料","value":2317,"verified":1},{"version":"new","material":"SSP","kind":"pipe","caliber":20,"item":"裝表費_自備","value":1268,"verified":1},{"version":"new","material":"SSP","kind":"pipe","caliber":20,"item":"裝表費_供料","value":2317,"verified":1},{"version":"new","material":"SSP","kind":"pipe","caliber":25,"item":"裝表費_自備","value":1302,"verified":1},{"version":"new","material":"SSP","kind":"pipe","caliber":25,"item":"裝表費_供料","value":2904,"verified":1},{"version":"new","material":"SSP","kind":"pipe","caliber":40,"item":"裝表費_自備","value":1477,"verified":1},{"version":"new","material":"SSP","kind":"pipe","caliber":40,"item":"裝表費_供料","value":4947,"verified":1},{"version":"new","material":"SSP","kind":"pipe","caliber":50,"item":"裝表費_自備","value":6510,"verified":1},{"version":"new","material":"SSP","kind":"pipe","caliber":50,"item":"裝表費_供料","value":0,"verified":1},{"version":"new","material":"SSP","kind":"pipe","caliber":80,"item":"裝表費_自備","value":6719,"verified":1},{"version":"new","material":"SSP","kind":"pipe","caliber":80,"item":"裝表費_供料","value":0,"verified":1},{"version":"new","material":"SSP","kind":"pipe","caliber":100,"item":"裝表費_自備","value":11516,"verified":1},{"version":"new","material":"SSP","kind":"pipe","caliber":100,"item":"裝表費_供料","value":0,"verified":1},{"version":"new","material":"SSP","kind":"pipe","caliber":150,"item":"裝表費_自備","value":13936,"verified":1},{"version":"new","material":"SSP","kind":"pipe","caliber":150,"item":"裝表費_供料","value":0,"verified":1},{"version":"new","material":"SSP","kind":"pipe","caliber":200,"item":"裝表費_自備","value":17870,"verified":1},{"version":"new","material":"SSP","kind":"pipe","caliber":200,"item":"裝表費_供料","value":0,"verified":1},{"version":"new","material":"SSP","kind":"pipe","caliber":250,"item":"裝表費_自備","value":18855,"verified":1},{"version":"new","material":"SSP","kind":"pipe","caliber":250,"item":"裝表費_供料","value":0,"verified":1},{"version":"new","material":"SSP","kind":"pipe","caliber":300,"item":"裝表費_自備","value":22834,"verified":1},{"version":"new","material":"SSP","kind":"pipe","caliber":300,"item":"裝表費_供料","value":0,"verified":1},{"version":"new","material":"SSP","kind":"pipe","caliber":350,"item":"裝表費_自備","value":26916,"verified":1},{"version":"new","material":"SSP","kind":"pipe","caliber":350,"item":"裝表費_供料","value":0,"verified":1},{"version":"new","material":"SSP","kind":"pipe","caliber":400,"item":"裝表費_自備","value":34145,"verified":1},{"version":"new","material":"SSP","kind":"pipe","caliber":400,"item":"裝表費_供料","value":0,"verified":1},{"version":"new","material":"SSP","kind":"pipe","caliber":450,"item":"裝表費_自備","value":36107,"verified":1},{"version":"new","material":"SSP","kind":"pipe","caliber":450,"item":"裝表費_供料","value":0,"verified":1},{"version":"new","material":"SSP","kind":"pipe","caliber":500,"item":"裝表費_自備","value":46468,"verified":1},{"version":"new","material":"SSP","kind":"pipe","caliber":500,"item":"裝表費_供料","value":0,"verified":1},{"version":"new","material":"SSP","kind":"pipe","caliber":600,"item":"裝表費_自備","value":53033,"verified":1},{"version":"new","material":"SSP","kind":"pipe","caliber":600,"item":"裝表費_供料","value":0,"verified":1},{"version":"new","material":"DIP","kind":"pipe","caliber":13,"item":"裝表費_自備","value":1268,"verified":1},{"version":"new","material":"DIP","kind":"pipe","caliber":13,"item":"裝表費_供料","value":2317,"verified":1},{"version":"new","material":"DIP","kind":"pipe","caliber":20,"item":"裝表費_自備","value":1268,"verified":1},{"version":"new","material":"DIP","kind":"pipe","caliber":20,"item":"裝表費_供料","value":2317,"verified":1},{"version":"new","material":"DIP","kind":"pipe","caliber":25,"item":"裝表費_自備","value":1302,"verified":1},{"version":"new","material":"DIP","kind":"pipe","caliber":25,"item":"裝表費_供料","value":2904,"verified":1},{"version":"new","material":"DIP","kind":"pipe","caliber":40,"item":"裝表費_自備","value":1477,"verified":1},{"version":"new","material":"DIP","kind":"pipe","caliber":40,"item":"裝表費_供料","value":4947,"verified":1},{"version":"new","material":"DIP","kind":"pipe","caliber":50,"item":"裝表費_自備","value":6510,"verified":1},{"version":"new","material":"DIP","kind":"pipe","caliber":50,"item":"裝表費_供料","value":0,"verified":1},{"version":"new","material":"DIP","kind":"pipe","caliber":80,"item":"裝表費_自備","value":6719,"verified":1},{"version":"new","material":"DIP","kind":"pipe","caliber":80,"item":"裝表費_供料","value":0,"verified":1},{"version":"new","material":"DIP","kind":"pipe","caliber":100,"item":"裝表費_自備","value":11516,"verified":1},{"version":"new","material":"DIP","kind":"pipe","caliber":100,"item":"裝表費_供料","value":0,"verified":1},{"version":"new","material":"DIP","kind":"pipe","caliber":150,"item":"裝表費_自備","value":13936,"verified":1},{"version":"new","material":"DIP","kind":"pipe","caliber":150,"item":"裝表費_供料","value":0,"verified":1},{"version":"new","material":"DIP","kind":"pipe","caliber":200,"item":"裝表費_自備","value":17870,"verified":1},{"version":"new","material":"DIP","kind":"pipe","caliber":200,"item":"裝表費_供料","value":0,"verified":1},{"version":"new","material":"DIP","kind":"pipe","caliber":250,"item":"裝表費_自備","value":18855,"verified":1},{"version":"new","material":"DIP","kind":"pipe","caliber":250,"item":"裝表費_供料","value":0,"verified":1},{"version":"new","material":"DIP","kind":"pipe","caliber":300,"item":"裝表費_自備","value":22834,"verified":1},{"version":"new","material":"DIP","kind":"pipe","caliber":300,"item":"裝表費_供料","value":0,"verified":1},{"version":"new","material":"DIP","kind":"pipe","caliber":350,"item":"裝表費_自備","value":26916,"verified":1},{"version":"new","material":"DIP","kind":"pipe","caliber":350,"item":"裝表費_供料","value":0,"verified":1},{"version":"new","material":"DIP","kind":"pipe","caliber":400,"item":"裝表費_自備","value":34145,"verified":1},{"version":"new","material":"DIP","kind":"pipe","caliber":400,"item":"裝表費_供料","value":0,"verified":1},{"version":"new","material":"DIP","kind":"pipe","caliber":450,"item":"裝表費_自備","value":36107,"verified":1},{"version":"new","material":"DIP","kind":"pipe","caliber":450,"item":"裝表費_供料","value":0,"verified":1},{"version":"new","material":"DIP","kind":"pipe","caliber":500,"item":"裝表費_自備","value":46468,"verified":1},{"version":"new","material":"DIP","kind":"pipe","caliber":500,"item":"裝表費_供料","value":0,"verified":1},{"version":"new","material":"DIP","kind":"pipe","caliber":600,"item":"裝表費_自備","value":53033,"verified":1},{"version":"new","material":"DIP","kind":"pipe","caliber":600,"item":"裝表費_供料","value":0,"verified":1},{"version":"new","material":"PEP","kind":"pipe","caliber":13,"item":"裝表費_自備","value":1268,"verified":1},{"version":"new","material":"PEP","kind":"pipe","caliber":13,"item":"裝表費_供料","value":2317,"verified":1},{"version":"new","material":"PEP","kind":"pipe","caliber":20,"item":"裝表費_自備","value":1268,"verified":1},{"version":"new","material":"PEP","kind":"pipe","caliber":20,"item":"裝表費_供料","value":2317,"verified":1},{"version":"new","material":"PEP","kind":"pipe","caliber":25,"item":"裝表費_自備","value":1302,"verified":1},{"version":"new","material":"PEP","kind":"pipe","caliber":25,"item":"裝表費_供料","value":2904,"verified":1},{"version":"new","material":"PEP","kind":"pipe","caliber":40,"item":"裝表費_自備","value":1477,"verified":1},{"version":"new","material":"PEP","kind":"pipe","caliber":40,"item":"裝表費_供料","value":4947,"verified":1},{"version":"new","material":"PEP","kind":"pipe","caliber":50,"item":"裝表費_自備","value":6510,"verified":1},{"version":"new","material":"PEP","kind":"pipe","caliber":50,"item":"裝表費_供料","value":0,"verified":1},{"version":"new","material":"PEP","kind":"pipe","caliber":80,"item":"裝表費_自備","value":6719,"verified":1},{"version":"new","material":"PEP","kind":"pipe","caliber":80,"item":"裝表費_供料","value":0,"verified":1},{"version":"new","material":"PEP","kind":"pipe","caliber":100,"item":"裝表費_自備","value":11516,"verified":1},{"version":"new","material":"PEP","kind":"pipe","caliber":100,"item":"裝表費_供料","value":0,"verified":1},{"version":"new","material":"PEP","kind":"pipe","caliber":150,"item":"裝表費_自備","value":13936,"verified":1},{"version":"new","material":"PEP","kind":"pipe","caliber":150,"item":"裝表費_供料","value":0,"verified":1},{"version":"new","material":"PEP","kind":"pipe","caliber":200,"item":"裝表費_自備","value":17870,"verified":1},{"version":"new","material":"PEP","kind":"pipe","caliber":200,"item":"裝表費_供料","value":0,"verified":1},{"version":"new","material":"PEP","kind":"pipe","caliber":250,"item":"裝表費_自備","value":18855,"verified":1},{"version":"new","material":"PEP","kind":"pipe","caliber":250,"item":"裝表費_供料","value":0,"verified":1},{"version":"new","material":"PEP","kind":"pipe","caliber":300,"item":"裝表費_自備","value":22834,"verified":1},{"version":"new","material":"PEP","kind":"pipe","caliber":300,"item":"裝表費_供料","value":0,"verified":1},{"version":"new","material":"PEP","kind":"pipe","caliber":350,"item":"裝表費_自備","value":26916,"verified":1},{"version":"new","material":"PEP","kind":"pipe","caliber":350,"item":"裝表費_供料","value":0,"verified":1},{"version":"new","material":"PEP","kind":"pipe","caliber":400,"item":"裝表費_自備","value":34145,"verified":1},{"version":"new","material":"PEP","kind":"pipe","caliber":400,"item":"裝表費_供料","value":0,"verified":1},{"version":"new","material":"PEP","kind":"pipe","caliber":450,"item":"裝表費_自備","value":36107,"verified":1},{"version":"new","material":"PEP","kind":"pipe","caliber":450,"item":"裝表費_供料","value":0,"verified":1},{"version":"new","material":"PEP","kind":"pipe","caliber":500,"item":"裝表費_自備","value":46468,"verified":1},{"version":"new","material":"PEP","kind":"pipe","caliber":500,"item":"裝表費_供料","value":0,"verified":1},{"version":"new","material":"PEP","kind":"pipe","caliber":600,"item":"裝表費_自備","value":53033,"verified":1},{"version":"new","material":"PEP","kind":"pipe","caliber":600,"item":"裝表費_供料","value":0,"verified":1},{"version":"new","material":"PVCP","kind":"pipe","caliber":13,"item":"裝表費_自備","value":1268,"verified":1},{"version":"new","material":"PVCP","kind":"pipe","caliber":13,"item":"裝表費_供料","value":2317,"verified":1},{"version":"new","material":"PVCP","kind":"pipe","caliber":20,"item":"裝表費_自備","value":1268,"verified":1},{"version":"new","material":"PVCP","kind":"pipe","caliber":20,"item":"裝表費_供料","value":2317,"verified":1},{"version":"new","material":"PVCP","kind":"pipe","caliber":25,"item":"裝表費_自備","value":1302,"verified":1},{"version":"new","material":"PVCP","kind":"pipe","caliber":25,"item":"裝表費_供料","value":2904,"verified":1},{"version":"new","material":"PVCP","kind":"pipe","caliber":40,"item":"裝表費_自備","value":1477,"verified":1},{"version":"new","material":"PVCP","kind":"pipe","caliber":40,"item":"裝表費_供料","value":4947,"verified":1},{"version":"new","material":"PVCP","kind":"pipe","caliber":50,"item":"裝表費_自備","value":6510,"verified":1},{"version":"new","material":"PVCP","kind":"pipe","caliber":50,"item":"裝表費_供料","value":0,"verified":1},{"version":"new","material":"PVCP","kind":"pipe","caliber":80,"item":"裝表費_自備","value":6719,"verified":1},{"version":"new","material":"PVCP","kind":"pipe","caliber":80,"item":"裝表費_供料","value":0,"verified":1},{"version":"new","material":"PVCP","kind":"pipe","caliber":100,"item":"裝表費_自備","value":11516,"verified":1},{"version":"new","material":"PVCP","kind":"pipe","caliber":100,"item":"裝表費_供料","value":0,"verified":1},{"version":"new","material":"PVCP","kind":"pipe","caliber":150,"item":"裝表費_自備","value":13936,"verified":1},{"version":"new","material":"PVCP","kind":"pipe","caliber":150,"item":"裝表費_供料","value":0,"verified":1},{"version":"new","material":"PVCP","kind":"pipe","caliber":200,"item":"裝表費_自備","value":17870,"verified":1},{"version":"new","material":"PVCP","kind":"pipe","caliber":200,"item":"裝表費_供料","value":0,"verified":1},{"version":"new","material":"PVCP","kind":"pipe","caliber":250,"item":"裝表費_自備","value":18855,"verified":1},{"version":"new","material":"PVCP","kind":"pipe","caliber":250,"item":"裝表費_供料","value":0,"verified":1},{"version":"new","material":"PVCP","kind":"pipe","caliber":300,"item":"裝表費_自備","value":22834,"verified":1},{"version":"new","material":"PVCP","kind":"pipe","caliber":300,"item":"裝表費_供料","value":0,"verified":1},{"version":"new","material":"PVCP","kind":"pipe","caliber":350,"item":"裝表費_自備","value":26916,"verified":1},{"version":"new","material":"PVCP","kind":"pipe","caliber":350,"item":"裝表費_供料","value":0,"verified":1},{"version":"new","material":"PVCP","kind":"pipe","caliber":400,"item":"裝表費_自備","value":34145,"verified":1},{"version":"new","material":"PVCP","kind":"pipe","caliber":400,"item":"裝表費_供料","value":0,"verified":1},{"version":"new","material":"PVCP","kind":"pipe","caliber":450,"item":"裝表費_自備","value":36107,"verified":1},{"version":"new","material":"PVCP","kind":"pipe","caliber":450,"item":"裝表費_供料","value":0,"verified":1},{"version":"new","material":"PVCP","kind":"pipe","caliber":500,"item":"裝表費_自備","value":46468,"verified":1},{"version":"new","material":"PVCP","kind":"pipe","caliber":500,"item":"裝表費_供料","value":0,"verified":1},{"version":"new","material":"PVCP","kind":"pipe","caliber":600,"item":"裝表費_自備","value":53033,"verified":1},{"version":"new","material":"PVCP","kind":"pipe","caliber":600,"item":"裝表費_供料","value":0,"verified":1},{"version":"new","material":"HDPEP","kind":"pipe","caliber":13,"item":"裝表費_自備","value":1268,"verified":1},{"version":"new","material":"HDPEP","kind":"pipe","caliber":13,"item":"裝表費_供料","value":2317,"verified":1},{"version":"new","material":"HDPEP","kind":"pipe","caliber":20,"item":"裝表費_自備","value":1268,"verified":1},{"version":"new","material":"HDPEP","kind":"pipe","caliber":20,"item":"裝表費_供料","value":2317,"verified":1},{"version":"new","material":"HDPEP","kind":"pipe","caliber":25,"item":"裝表費_自備","value":1302,"verified":1},{"version":"new","material":"HDPEP","kind":"pipe","caliber":25,"item":"裝表費_供料","value":2904,"verified":1},{"version":"new","material":"HDPEP","kind":"pipe","caliber":40,"item":"裝表費_自備","value":1477,"verified":1},{"version":"new","material":"HDPEP","kind":"pipe","caliber":40,"item":"裝表費_供料","value":4947,"verified":1},{"version":"new","material":"HDPEP","kind":"pipe","caliber":50,"item":"裝表費_自備","value":6510,"verified":1},{"version":"new","material":"HDPEP","kind":"pipe","caliber":50,"item":"裝表費_供料","value":0,"verified":1},{"version":"new","material":"HDPEP","kind":"pipe","caliber":80,"item":"裝表費_自備","value":6719,"verified":1},{"version":"new","material":"HDPEP","kind":"pipe","caliber":80,"item":"裝表費_供料","value":0,"verified":1},{"version":"new","material":"HDPEP","kind":"pipe","caliber":100,"item":"裝表費_自備","value":11516,"verified":1},{"version":"new","material":"HDPEP","kind":"pipe","caliber":100,"item":"裝表費_供料","value":0,"verified":1},{"version":"new","material":"HDPEP","kind":"pipe","caliber":150,"item":"裝表費_自備","value":13936,"verified":1},{"version":"new","material":"HDPEP","kind":"pipe","caliber":150,"item":"裝表費_供料","value":0,"verified":1},{"version":"new","material":"HDPEP","kind":"pipe","caliber":200,"item":"裝表費_自備","value":17870,"verified":1},{"version":"new","material":"HDPEP","kind":"pipe","caliber":200,"item":"裝表費_供料","value":0,"verified":1},{"version":"new","material":"HDPEP","kind":"pipe","caliber":250,"item":"裝表費_自備","value":18855,"verified":1},{"version":"new","material":"HDPEP","kind":"pipe","caliber":250,"item":"裝表費_供料","value":0,"verified":1},{"version":"new","material":"HDPEP","kind":"pipe","caliber":300,"item":"裝表費_自備","value":22834,"verified":1},{"version":"new","material":"HDPEP","kind":"pipe","caliber":300,"item":"裝表費_供料","value":0,"verified":1},{"version":"new","material":"HDPEP","kind":"pipe","caliber":350,"item":"裝表費_自備","value":26916,"verified":1},{"version":"new","material":"HDPEP","kind":"pipe","caliber":350,"item":"裝表費_供料","value":0,"verified":1},{"version":"new","material":"HDPEP","kind":"pipe","caliber":400,"item":"裝表費_自備","value":34145,"verified":1},{"version":"new","material":"HDPEP","kind":"pipe","caliber":400,"item":"裝表費_供料","value":0,"verified":1},{"version":"new","material":"HDPEP","kind":"pipe","caliber":450,"item":"裝表費_自備","value":36107,"verified":1},{"version":"new","material":"HDPEP","kind":"pipe","caliber":450,"item":"裝表費_供料","value":0,"verified":1},{"version":"new","material":"HDPEP","kind":"pipe","caliber":500,"item":"裝表費_自備","value":46468,"verified":1},{"version":"new","material":"HDPEP","kind":"pipe","caliber":500,"item":"裝表費_供料","value":0,"verified":1},{"version":"new","material":"HDPEP","kind":"pipe","caliber":600,"item":"裝表費_自備","value":53033,"verified":1},{"version":"new","material":"HDPEP","kind":"pipe","caliber":600,"item":"裝表費_供料","value":0,"verified":1},{"version":"new","material":"HIWP","kind":"pipe","caliber":13,"item":"裝表費_自備","value":1268,"verified":1},{"version":"new","material":"HIWP","kind":"pipe","caliber":13,"item":"裝表費_供料","value":2317,"verified":1},{"version":"new","material":"HIWP","kind":"pipe","caliber":20,"item":"裝表費_自備","value":1268,"verified":1},{"version":"new","material":"HIWP","kind":"pipe","caliber":20,"item":"裝表費_供料","value":2317,"verified":1},{"version":"new","material":"HIWP","kind":"pipe","caliber":25,"item":"裝表費_自備","value":1302,"verified":1},{"version":"new","material":"HIWP","kind":"pipe","caliber":25,"item":"裝表費_供料","value":2904,"verified":1},{"version":"new","material":"HIWP","kind":"pipe","caliber":40,"item":"裝表費_自備","value":1477,"verified":1},{"version":"new","material":"HIWP","kind":"pipe","caliber":40,"item":"裝表費_供料","value":4947,"verified":1},{"version":"new","material":"HIWP","kind":"pipe","caliber":50,"item":"裝表費_自備","value":6510,"verified":1},{"version":"new","material":"HIWP","kind":"pipe","caliber":50,"item":"裝表費_供料","value":0,"verified":1},{"version":"new","material":"HIWP","kind":"pipe","caliber":80,"item":"裝表費_自備","value":6719,"verified":1},{"version":"new","material":"HIWP","kind":"pipe","caliber":80,"item":"裝表費_供料","value":0,"verified":1},{"version":"new","material":"HIWP","kind":"pipe","caliber":100,"item":"裝表費_自備","value":11516,"verified":1},{"version":"new","material":"HIWP","kind":"pipe","caliber":100,"item":"裝表費_供料","value":0,"verified":1},{"version":"new","material":"HIWP","kind":"pipe","caliber":150,"item":"裝表費_自備","value":13936,"verified":1},{"version":"new","material":"HIWP","kind":"pipe","caliber":150,"item":"裝表費_供料","value":0,"verified":1},{"version":"new","material":"HIWP","kind":"pipe","caliber":200,"item":"裝表費_自備","value":17870,"verified":1},{"version":"new","material":"HIWP","kind":"pipe","caliber":200,"item":"裝表費_供料","value":0,"verified":1},{"version":"new","material":"HIWP","kind":"pipe","caliber":250,"item":"裝表費_自備","value":18855,"verified":1},{"version":"new","material":"HIWP","kind":"pipe","caliber":250,"item":"裝表費_供料","value":0,"verified":1},{"version":"new","material":"HIWP","kind":"pipe","caliber":300,"item":"裝表費_自備","value":22834,"verified":1},{"version":"new","material":"HIWP","kind":"pipe","caliber":300,"item":"裝表費_供料","value":0,"verified":1},{"version":"new","material":"HIWP","kind":"pipe","caliber":350,"item":"裝表費_自備","value":26916,"verified":1},{"version":"new","material":"HIWP","kind":"pipe","caliber":350,"item":"裝表費_供料","value":0,"verified":1},{"version":"new","material":"HIWP","kind":"pipe","caliber":400,"item":"裝表費_自備","value":34145,"verified":1},{"version":"new","material":"HIWP","kind":"pipe","caliber":400,"item":"裝表費_供料","value":0,"verified":1},{"version":"new","material":"HIWP","kind":"pipe","caliber":450,"item":"裝表費_自備","value":36107,"verified":1},{"version":"new","material":"HIWP","kind":"pipe","caliber":450,"item":"裝表費_供料","value":0,"verified":1},{"version":"new","material":"HIWP","kind":"pipe","caliber":500,"item":"裝表費_自備","value":46468,"verified":1},{"version":"new","material":"HIWP","kind":"pipe","caliber":500,"item":"裝表費_供料","value":0,"verified":1},{"version":"new","material":"HIWP","kind":"pipe","caliber":600,"item":"裝表費_自備","value":53033,"verified":1},{"version":"new","material":"HIWP","kind":"pipe","caliber":600,"item":"裝表費_供料","value":0,"verified":1},{"version":"old","material":"PVCP","kind":"pipe","caliber":13,"item":"接水處","value":1365,"verified":1},{"version":"old","material":"PVCP","kind":"pipe","caliber":13,"item":"基本4公尺工料費","value":4200,"verified":1},{"version":"old","material":"PVCP","kind":"pipe","caliber":13,"item":"每增加1公尺工料費","value":914,"verified":1},{"version":"old","material":"PVCP","kind":"meter","caliber":13,"item":"水表組_平面","value":945,"verified":1},{"version":"old","material":"PVCP","kind":"meter","caliber":13,"item":"水表組_立式","value":945,"verified":1},{"version":"old","material":"PVCP","kind":"pipe","caliber":20,"item":"接水處","value":1512,"verified":1},{"version":"old","material":"PVCP","kind":"pipe","caliber":20,"item":"基本4公尺工料費","value":4242,"verified":1},{"version":"old","material":"PVCP","kind":"pipe","caliber":20,"item":"每增加1公尺工料費","value":914,"verified":1},{"version":"old","material":"PVCP","kind":"meter","caliber":20,"item":"水表組_平面","value":966,"verified":1},{"version":"old","material":"PVCP","kind":"meter","caliber":20,"item":"水表組_立式","value":966,"verified":1},{"version":"old","material":"PVCP","kind":"pipe","caliber":25,"item":"接水處","value":1838,"verified":1},{"version":"old","material":"PVCP","kind":"pipe","caliber":25,"item":"基本4公尺工料費","value":4274,"verified":1},{"version":"old","material":"PVCP","kind":"pipe","caliber":25,"item":"每增加1公尺工料費","value":924,"verified":1},{"version":"old","material":"PVCP","kind":"meter","caliber":25,"item":"水表組_平面","value":1554,"verified":1},{"version":"old","material":"PVCP","kind":"meter","caliber":25,"item":"水表組_立式","value":1554,"verified":1},{"version":"old","material":"PVCP","kind":"pipe","caliber":40,"item":"接水處","value":2741,"verified":1},{"version":"old","material":"PVCP","kind":"pipe","caliber":40,"item":"基本4公尺工料費","value":4515,"verified":1},{"version":"old","material":"PVCP","kind":"pipe","caliber":40,"item":"每增加1公尺工料費","value":945,"verified":1},{"version":"old","material":"PVCP","kind":"meter","caliber":40,"item":"水表組_平面","value":2352,"verified":1},{"version":"old","material":"PVCP","kind":"meter","caliber":40,"item":"水表組_立式","value":2352,"verified":1},{"version":"old","material":"PVCP","kind":"pipe","caliber":50,"item":"接水處","value":11004,"verified":1},{"version":"old","material":"PVCP","kind":"pipe","caliber":50,"item":"基本4公尺工料費","value":7319,"verified":1},{"version":"old","material":"PVCP","kind":"pipe","caliber":50,"item":"每增加1公尺工料費","value":998,"verified":1},{"version":"old","material":"PVCP","kind":"meter","caliber":50,"item":"水表組_平面","value":23258,"verified":1},{"version":"old","material":"PVCP","kind":"meter","caliber":50,"item":"水表組_立式","value":23258,"verified":1},{"version":"old","material":"PVCP","kind":"pipe","caliber":80,"item":"接水處","value":17430,"verified":1},{"version":"old","material":"PVCP","kind":"pipe","caliber":80,"item":"基本4公尺工料費","value":25200,"verified":1},{"version":"old","material":"PVCP","kind":"pipe","caliber":80,"item":"每增加1公尺工料費","value":1050,"verified":1},{"version":"old","material":"PVCP","kind":"meter","caliber":80,"item":"水表組_平面","value":27615,"verified":1},{"version":"old","material":"PVCP","kind":"meter","caliber":80,"item":"水表組_立式","value":27615,"verified":1},{"version":"old","material":"PVCP","kind":"pipe","caliber":100,"item":"接水處","value":22061,"verified":1},{"version":"old","material":"PVCP","kind":"pipe","caliber":100,"item":"基本4公尺工料費","value":28214,"verified":1},{"version":"old","material":"PVCP","kind":"pipe","caliber":100,"item":"每增加1公尺工料費","value":1260,"verified":1},{"version":"old","material":"PVCP","kind":"meter","caliber":100,"item":"水表組_平面","value":29106,"verified":1},{"version":"old","material":"PVCP","kind":"meter","caliber":100,"item":"水表組_立式","value":29106,"verified":1},{"version":"old","material":"PVCP","kind":"pipe","caliber":150,"item":"接水處","value":30020,"verified":1},{"version":"old","material":"PVCP","kind":"pipe","caliber":150,"item":"基本4公尺工料費","value":44342,"verified":1},{"version":"old","material":"PVCP","kind":"pipe","caliber":150,"item":"每增加1公尺工料費","value":1628,"verified":1},{"version":"old","material":"PVCP","kind":"meter","caliber":150,"item":"水表組_平面","value":35259,"verified":1},{"version":"old","material":"PVCP","kind":"meter","caliber":150,"item":"水表組_立式","value":35259,"verified":1},{"version":"old","material":"PVCP","kind":"pipe","caliber":200,"item":"接水處","value":37905,"verified":1},{"version":"old","material":"PVCP","kind":"pipe","caliber":200,"item":"基本4公尺工料費","value":53655,"verified":1},{"version":"old","material":"PVCP","kind":"pipe","caliber":200,"item":"每增加1公尺工料費","value":1995,"verified":1},{"version":"old","material":"PVCP","kind":"meter","caliber":200,"item":"水表組_平面","value":42105,"verified":1},{"version":"old","material":"PVCP","kind":"meter","caliber":200,"item":"水表組_立式","value":42105,"verified":1},{"version":"old","material":"PVCP","kind":"pipe","caliber":250,"item":"接水處","value":0,"verified":1},{"version":"old","material":"PVCP","kind":"pipe","caliber":250,"item":"基本4公尺工料費","value":0,"verified":1},{"version":"old","material":"PVCP","kind":"pipe","caliber":250,"item":"每增加1公尺工料費","value":0,"verified":1},{"version":"old","material":"PVCP","kind":"meter","caliber":250,"item":"水表組_平面","value":0,"verified":1},{"version":"old","material":"PVCP","kind":"meter","caliber":250,"item":"水表組_立式","value":0,"verified":1},{"version":"old","material":"PVCP","kind":"pipe","caliber":300,"item":"接水處","value":0,"verified":1},{"version":"old","material":"PVCP","kind":"pipe","caliber":300,"item":"基本4公尺工料費","value":0,"verified":1},{"version":"old","material":"PVCP","kind":"pipe","caliber":300,"item":"每增加1公尺工料費","value":0,"verified":1},{"version":"old","material":"PVCP","kind":"meter","caliber":300,"item":"水表組_平面","value":0,"verified":1},{"version":"old","material":"PVCP","kind":"meter","caliber":300,"item":"水表組_立式","value":0,"verified":1},{"version":"old","material":"PVCP","kind":"pipe","caliber":350,"item":"接水處","value":0,"verified":1},{"version":"old","material":"PVCP","kind":"pipe","caliber":350,"item":"基本4公尺工料費","value":0,"verified":1},{"version":"old","material":"PVCP","kind":"pipe","caliber":350,"item":"每增加1公尺工料費","value":0,"verified":1},{"version":"old","material":"PVCP","kind":"meter","caliber":350,"item":"水表組_平面","value":0,"verified":1},{"version":"old","material":"PVCP","kind":"meter","caliber":350,"item":"水表組_立式","value":0,"verified":1},{"version":"old","material":"PVCP","kind":"pipe","caliber":400,"item":"接水處","value":0,"verified":1},{"version":"old","material":"PVCP","kind":"pipe","caliber":400,"item":"基本4公尺工料費","value":0,"verified":1},{"version":"old","material":"PVCP","kind":"pipe","caliber":400,"item":"每增加1公尺工料費","value":0,"verified":1},{"version":"old","material":"PVCP","kind":"meter","caliber":400,"item":"水表組_平面","value":0,"verified":1},{"version":"old","material":"PVCP","kind":"meter","caliber":400,"item":"水表組_立式","value":0,"verified":1},{"version":"old","material":"PVCP","kind":"pipe","caliber":450,"item":"接水處","value":0,"verified":1},{"version":"old","material":"PVCP","kind":"pipe","caliber":450,"item":"基本4公尺工料費","value":0,"verified":1},{"version":"old","material":"PVCP","kind":"pipe","caliber":450,"item":"每增加1公尺工料費","value":0,"verified":1},{"version":"old","material":"PVCP","kind":"meter","caliber":450,"item":"水表組_平面","value":0,"verified":1},{"version":"old","material":"PVCP","kind":"meter","caliber":450,"item":"水表組_立式","value":0,"verified":1},{"version":"old","material":"PVCP","kind":"pipe","caliber":500,"item":"接水處","value":0,"verified":1},{"version":"old","material":"PVCP","kind":"pipe","caliber":500,"item":"基本4公尺工料費","value":0,"verified":1},{"version":"old","material":"PVCP","kind":"pipe","caliber":500,"item":"每增加1公尺工料費","value":0,"verified":1},{"version":"old","material":"PVCP","kind":"meter","caliber":500,"item":"水表組_平面","value":0,"verified":1},{"version":"old","material":"PVCP","kind":"meter","caliber":500,"item":"水表組_立式","value":0,"verified":1},{"version":"old","material":"PVCP","kind":"pipe","caliber":600,"item":"接水處","value":0,"verified":1},{"version":"old","material":"PVCP","kind":"pipe","caliber":600,"item":"基本4公尺工料費","value":0,"verified":1},{"version":"old","material":"PVCP","kind":"pipe","caliber":600,"item":"每增加1公尺工料費","value":0,"verified":1},{"version":"old","material":"PVCP","kind":"meter","caliber":600,"item":"水表組_平面","value":0,"verified":1},{"version":"old","material":"PVCP","kind":"meter","caliber":600,"item":"水表組_立式","value":0,"verified":1},{"version":"old","material":"DIP","kind":"pipe","caliber":13,"item":"接水處","value":0,"verified":1},{"version":"old","material":"DIP","kind":"pipe","caliber":13,"item":"基本4公尺工料費","value":0,"verified":1},{"version":"old","material":"DIP","kind":"pipe","caliber":13,"item":"每增加1公尺工料費","value":0,"verified":1},{"version":"old","material":"DIP","kind":"meter","caliber":13,"item":"水表組_平面","value":0,"verified":1},{"version":"old","material":"DIP","kind":"meter","caliber":13,"item":"水表組_立式","value":0,"verified":1},{"version":"old","material":"DIP","kind":"pipe","caliber":20,"item":"接水處","value":0,"verified":1},{"version":"old","material":"DIP","kind":"pipe","caliber":20,"item":"基本4公尺工料費","value":0,"verified":1},{"version":"old","material":"DIP","kind":"pipe","caliber":20,"item":"每增加1公尺工料費","value":0,"verified":1},{"version":"old","material":"DIP","kind":"meter","caliber":20,"item":"水表組_平面","value":0,"verified":1},{"version":"old","material":"DIP","kind":"meter","caliber":20,"item":"水表組_立式","value":0,"verified":1},{"version":"old","material":"DIP","kind":"pipe","caliber":25,"item":"接水處","value":0,"verified":1},{"version":"old","material":"DIP","kind":"pipe","caliber":25,"item":"基本4公尺工料費","value":0,"verified":1},{"version":"old","material":"DIP","kind":"pipe","caliber":25,"item":"每增加1公尺工料費","value":0,"verified":1},{"version":"old","material":"DIP","kind":"meter","caliber":25,"item":"水表組_平面","value":0,"verified":1},{"version":"old","material":"DIP","kind":"meter","caliber":25,"item":"水表組_立式","value":0,"verified":1},{"version":"old","material":"DIP","kind":"pipe","caliber":40,"item":"接水處","value":0,"verified":1},{"version":"old","material":"DIP","kind":"pipe","caliber":40,"item":"基本4公尺工料費","value":0,"verified":1},{"version":"old","material":"DIP","kind":"pipe","caliber":40,"item":"每增加1公尺工料費","value":0,"verified":1},{"version":"old","material":"DIP","kind":"meter","caliber":40,"item":"水表組_平面","value":0,"verified":1},{"version":"old","material":"DIP","kind":"meter","caliber":40,"item":"水表組_立式","value":0,"verified":1},{"version":"old","material":"DIP","kind":"pipe","caliber":50,"item":"接水處","value":0,"verified":1},{"version":"old","material":"DIP","kind":"pipe","caliber":50,"item":"基本4公尺工料費","value":0,"verified":1},{"version":"old","material":"DIP","kind":"pipe","caliber":50,"item":"每增加1公尺工料費","value":0,"verified":1},{"version":"old","material":"DIP","kind":"meter","caliber":50,"item":"水表組_平面","value":0,"verified":1},{"version":"old","material":"DIP","kind":"meter","caliber":50,"item":"水表組_立式","value":0,"verified":1},{"version":"old","material":"DIP","kind":"pipe","caliber":80,"item":"接水處","value":0,"verified":1},{"version":"old","material":"DIP","kind":"pipe","caliber":80,"item":"基本4公尺工料費","value":0,"verified":1},{"version":"old","material":"DIP","kind":"pipe","caliber":80,"item":"每增加1公尺工料費","value":0,"verified":1},{"version":"old","material":"DIP","kind":"meter","caliber":80,"item":"水表組_平面","value":0,"verified":1},{"version":"old","material":"DIP","kind":"meter","caliber":80,"item":"水表組_立式","value":0,"verified":1},{"version":"old","material":"DIP","kind":"pipe","caliber":100,"item":"接水處","value":37705,"verified":1},{"version":"old","material":"DIP","kind":"pipe","caliber":100,"item":"基本4公尺工料費","value":28595,"verified":1},{"version":"old","material":"DIP","kind":"pipe","caliber":100,"item":"每增加1公尺工料費","value":2250,"verified":1},{"version":"old","material":"DIP","kind":"meter","caliber":100,"item":"水表組_平面","value":41900,"verified":1},{"version":"old","material":"DIP","kind":"meter","caliber":100,"item":"水表組_立式","value":41900,"verified":1},{"version":"old","material":"DIP","kind":"pipe","caliber":150,"item":"接水處","value":56850,"verified":1},{"version":"old","material":"DIP","kind":"pipe","caliber":150,"item":"基本4公尺工料費","value":39735,"verified":1},{"version":"old","material":"DIP","kind":"pipe","caliber":150,"item":"每增加1公尺工料費","value":2810,"verified":1},{"version":"old","material":"DIP","kind":"meter","caliber":150,"item":"水表組_平面","value":50000,"verified":1},{"version":"old","material":"DIP","kind":"meter","caliber":150,"item":"水表組_立式","value":50000,"verified":1},{"version":"old","material":"DIP","kind":"pipe","caliber":200,"item":"接水處","value":75590,"verified":1},{"version":"old","material":"DIP","kind":"pipe","caliber":200,"item":"基本4公尺工料費","value":49145,"verified":1},{"version":"old","material":"DIP","kind":"pipe","caliber":200,"item":"每增加1公尺工料費","value":3350,"verified":1},{"version":"old","material":"DIP","kind":"meter","caliber":200,"item":"水表組_平面","value":55300,"verified":1},{"version":"old","material":"DIP","kind":"meter","caliber":200,"item":"水表組_立式","value":55300,"verified":1},{"version":"old","material":"DIP","kind":"pipe","caliber":250,"item":"接水處","value":83275,"verified":1},{"version":"old","material":"DIP","kind":"pipe","caliber":250,"item":"基本4公尺工料費","value":70790,"verified":1},{"version":"old","material":"DIP","kind":"pipe","caliber":250,"item":"每增加1公尺工料費","value":3950,"verified":1},{"version":"old","material":"DIP","kind":"meter","caliber":250,"item":"水表組_平面","value":63600,"verified":1},{"version":"old","material":"DIP","kind":"meter","caliber":250,"item":"水表組_立式","value":63600,"verified":1},{"version":"old","material":"DIP","kind":"pipe","caliber":300,"item":"接水處","value":108365,"verified":1},{"version":"old","material":"DIP","kind":"pipe","caliber":300,"item":"基本4公尺工料費","value":92220,"verified":1},{"version":"old","material":"DIP","kind":"pipe","caliber":300,"item":"每增加1公尺工料費","value":4540,"verified":1},{"version":"old","material":"DIP","kind":"meter","caliber":300,"item":"水表組_平面","value":75900,"verified":1},{"version":"old","material":"DIP","kind":"meter","caliber":300,"item":"水表組_立式","value":75900,"verified":1},{"version":"old","material":"DIP","kind":"pipe","caliber":350,"item":"接水處","value":114825,"verified":1},{"version":"old","material":"DIP","kind":"pipe","caliber":350,"item":"基本4公尺工料費","value":115810,"verified":1},{"version":"old","material":"DIP","kind":"pipe","caliber":350,"item":"每增加1公尺工料費","value":5680,"verified":1},{"version":"old","material":"DIP","kind":"meter","caliber":350,"item":"水表組_平面","value":84000,"verified":1},{"version":"old","material":"DIP","kind":"meter","caliber":350,"item":"水表組_立式","value":84000,"verified":1},{"version":"old","material":"DIP","kind":"pipe","caliber":400,"item":"接水處","value":168995,"verified":1},{"version":"old","material":"DIP","kind":"pipe","caliber":400,"item":"基本4公尺工料費","value":160525,"verified":1},{"version":"old","material":"DIP","kind":"pipe","caliber":400,"item":"每增加1公尺工料費","value":6820,"verified":1},{"version":"old","material":"DIP","kind":"meter","caliber":400,"item":"水表組_平面","value":119400,"verified":1},{"version":"old","material":"DIP","kind":"meter","caliber":400,"item":"水表組_立式","value":119400,"verified":1},{"version":"old","material":"DIP","kind":"pipe","caliber":450,"item":"接水處","value":177625,"verified":1},{"version":"old","material":"DIP","kind":"pipe","caliber":450,"item":"基本4公尺工料費","value":182755,"verified":1},{"version":"old","material":"DIP","kind":"pipe","caliber":450,"item":"每增加1公尺工料費","value":7800,"verified":1},{"version":"old","material":"DIP","kind":"meter","caliber":450,"item":"水表組_平面","value":133200,"verified":1},{"version":"old","material":"DIP","kind":"meter","caliber":450,"item":"水表組_立式","value":133200,"verified":1},{"version":"old","material":"DIP","kind":"pipe","caliber":500,"item":"接水處","value":237960,"verified":1},{"version":"old","material":"DIP","kind":"pipe","caliber":500,"item":"基本4公尺工料費","value":207115,"verified":1},{"version":"old","material":"DIP","kind":"pipe","caliber":500,"item":"每增加1公尺工料費","value":8825,"verified":1},{"version":"old","material":"DIP","kind":"meter","caliber":500,"item":"水表組_平面","value":154400,"verified":1},{"version":"old","material":"DIP","kind":"meter","caliber":500,"item":"水表組_立式","value":154400,"verified":1},{"version":"old","material":"DIP","kind":"pipe","caliber":600,"item":"接水處","value":265985,"verified":1},{"version":"old","material":"DIP","kind":"pipe","caliber":600,"item":"基本4公尺工料費","value":268645,"verified":1},{"version":"old","material":"DIP","kind":"pipe","caliber":600,"item":"每增加1公尺工料費","value":11330,"verified":1},{"version":"old","material":"DIP","kind":"meter","caliber":600,"item":"水表組_平面","value":166300,"verified":1},{"version":"old","material":"DIP","kind":"meter","caliber":600,"item":"水表組_立式","value":166300,"verified":1},{"version":"old","material":"PEP","kind":"pipe","caliber":13,"item":"接水處","value":0,"verified":1},{"version":"old","material":"PEP","kind":"pipe","caliber":13,"item":"基本4公尺工料費","value":0,"verified":1},{"version":"old","material":"PEP","kind":"pipe","caliber":13,"item":"每增加1公尺工料費","value":0,"verified":1},{"version":"old","material":"PEP","kind":"meter","caliber":13,"item":"水表組_平面","value":0,"verified":1},{"version":"old","material":"PEP","kind":"meter","caliber":13,"item":"水表組_立式","value":0,"verified":1},{"version":"old","material":"PEP","kind":"pipe","caliber":20,"item":"接水處","value":7008,"verified":1},{"version":"old","material":"PEP","kind":"pipe","caliber":20,"item":"基本4公尺工料費","value":4633,"verified":1},{"version":"old","material":"PEP","kind":"pipe","caliber":20,"item":"每增加1公尺工料費","value":956,"verified":1},{"version":"old","material":"PEP","kind":"meter","caliber":20,"item":"水表組_平面","value":966,"verified":1},{"version":"old","material":"PEP","kind":"meter","caliber":20,"item":"水表組_立式","value":966,"verified":1},{"version":"old","material":"PEP","kind":"pipe","caliber":25,"item":"接水處","value":7415,"verified":1},{"version":"old","material":"PEP","kind":"pipe","caliber":25,"item":"基本4公尺工料費","value":4953,"verified":1},{"version":"old","material":"PEP","kind":"pipe","caliber":25,"item":"每增加1公尺工料費","value":971,"verified":1},{"version":"old","material":"PEP","kind":"meter","caliber":25,"item":"水表組_平面","value":1554,"verified":1},{"version":"old","material":"PEP","kind":"meter","caliber":25,"item":"水表組_立式","value":1554,"verified":1},{"version":"old","material":"PEP","kind":"pipe","caliber":40,"item":"接水處","value":8075,"verified":1},{"version":"old","material":"PEP","kind":"pipe","caliber":40,"item":"基本4公尺工料費","value":6770,"verified":1},{"version":"old","material":"PEP","kind":"pipe","caliber":40,"item":"每增加1公尺工料費","value":1025,"verified":1},{"version":"old","material":"PEP","kind":"meter","caliber":40,"item":"水表組_平面","value":2352,"verified":1},{"version":"old","material":"PEP","kind":"meter","caliber":40,"item":"水表組_立式","value":2352,"verified":1},{"version":"old","material":"PEP","kind":"pipe","caliber":50,"item":"接水處","value":8319,"verified":1},{"version":"old","material":"PEP","kind":"pipe","caliber":50,"item":"基本4公尺工料費","value":7350,"verified":1},{"version":"old","material":"PEP","kind":"pipe","caliber":50,"item":"每增加1公尺工料費","value":1084,"verified":1},{"version":"old","material":"PEP","kind":"meter","caliber":50,"item":"水表組_平面","value":23258,"verified":1},{"version":"old","material":"PEP","kind":"meter","caliber":50,"item":"水表組_立式","value":23258,"verified":1},{"version":"old","material":"PEP","kind":"pipe","caliber":80,"item":"接水處","value":0,"verified":1},{"version":"old","material":"PEP","kind":"pipe","caliber":80,"item":"基本4公尺工料費","value":0,"verified":1},{"version":"old","material":"PEP","kind":"pipe","caliber":80,"item":"每增加1公尺工料費","value":0,"verified":1},{"version":"old","material":"PEP","kind":"meter","caliber":80,"item":"水表組_平面","value":0,"verified":1},{"version":"old","material":"PEP","kind":"meter","caliber":80,"item":"水表組_立式","value":0,"verified":1},{"version":"old","material":"PEP","kind":"pipe","caliber":100,"item":"接水處","value":0,"verified":1},{"version":"old","material":"PEP","kind":"pipe","caliber":100,"item":"基本4公尺工料費","value":0,"verified":1},{"version":"old","material":"PEP","kind":"pipe","caliber":100,"item":"每增加1公尺工料費","value":0,"verified":1},{"version":"old","material":"PEP","kind":"meter","caliber":100,"item":"水表組_平面","value":0,"verified":1},{"version":"old","material":"PEP","kind":"meter","caliber":100,"item":"水表組_立式","value":0,"verified":1},{"version":"old","material":"PEP","kind":"pipe","caliber":150,"item":"接水處","value":0,"verified":1},{"version":"old","material":"PEP","kind":"pipe","caliber":150,"item":"基本4公尺工料費","value":0,"verified":1},{"version":"old","material":"PEP","kind":"pipe","caliber":150,"item":"每增加1公尺工料費","value":0,"verified":1},{"version":"old","material":"PEP","kind":"meter","caliber":150,"item":"水表組_平面","value":0,"verified":1},{"version":"old","material":"PEP","kind":"meter","caliber":150,"item":"水表組_立式","value":0,"verified":1},{"version":"old","material":"PEP","kind":"pipe","caliber":200,"item":"接水處","value":0,"verified":1},{"version":"old","material":"PEP","kind":"pipe","caliber":200,"item":"基本4公尺工料費","value":0,"verified":1},{"version":"old","material":"PEP","kind":"pipe","caliber":200,"item":"每增加1公尺工料費","value":0,"verified":1},{"version":"old","material":"PEP","kind":"meter","caliber":200,"item":"水表組_平面","value":0,"verified":1},{"version":"old","material":"PEP","kind":"meter","caliber":200,"item":"水表組_立式","value":0,"verified":1},{"version":"old","material":"PEP","kind":"pipe","caliber":250,"item":"接水處","value":0,"verified":1},{"version":"old","material":"PEP","kind":"pipe","caliber":250,"item":"基本4公尺工料費","value":0,"verified":1},{"version":"old","material":"PEP","kind":"pipe","caliber":250,"item":"每增加1公尺工料費","value":0,"verified":1},{"version":"old","material":"PEP","kind":"meter","caliber":250,"item":"水表組_平面","value":0,"verified":1},{"version":"old","material":"PEP","kind":"meter","caliber":250,"item":"水表組_立式","value":0,"verified":1},{"version":"old","material":"PEP","kind":"pipe","caliber":300,"item":"接水處","value":0,"verified":1},{"version":"old","material":"PEP","kind":"pipe","caliber":300,"item":"基本4公尺工料費","value":0,"verified":1},{"version":"old","material":"PEP","kind":"pipe","caliber":300,"item":"每增加1公尺工料費","value":0,"verified":1},{"version":"old","material":"PEP","kind":"meter","caliber":300,"item":"水表組_平面","value":0,"verified":1},{"version":"old","material":"PEP","kind":"meter","caliber":300,"item":"水表組_立式","value":0,"verified":1},{"version":"old","material":"PEP","kind":"pipe","caliber":350,"item":"接水處","value":0,"verified":1},{"version":"old","material":"PEP","kind":"pipe","caliber":350,"item":"基本4公尺工料費","value":0,"verified":1},{"version":"old","material":"PEP","kind":"pipe","caliber":350,"item":"每增加1公尺工料費","value":0,"verified":1},{"version":"old","material":"PEP","kind":"meter","caliber":350,"item":"水表組_平面","value":0,"verified":1},{"version":"old","material":"PEP","kind":"meter","caliber":350,"item":"水表組_立式","value":0,"verified":1},{"version":"old","material":"PEP","kind":"pipe","caliber":400,"item":"接水處","value":0,"verified":1},{"version":"old","material":"PEP","kind":"pipe","caliber":400,"item":"基本4公尺工料費","value":0,"verified":1},{"version":"old","material":"PEP","kind":"pipe","caliber":400,"item":"每增加1公尺工料費","value":0,"verified":1},{"version":"old","material":"PEP","kind":"meter","caliber":400,"item":"水表組_平面","value":0,"verified":1},{"version":"old","material":"PEP","kind":"meter","caliber":400,"item":"水表組_立式","value":0,"verified":1},{"version":"old","material":"PEP","kind":"pipe","caliber":450,"item":"接水處","value":0,"verified":1},{"version":"old","material":"PEP","kind":"pipe","caliber":450,"item":"基本4公尺工料費","value":0,"verified":1},{"version":"old","material":"PEP","kind":"pipe","caliber":450,"item":"每增加1公尺工料費","value":0,"verified":1},{"version":"old","material":"PEP","kind":"meter","caliber":450,"item":"水表組_平面","value":0,"verified":1},{"version":"old","material":"PEP","kind":"meter","caliber":450,"item":"水表組_立式","value":0,"verified":1},{"version":"old","material":"PEP","kind":"pipe","caliber":500,"item":"接水處","value":0,"verified":1},{"version":"old","material":"PEP","kind":"pipe","caliber":500,"item":"基本4公尺工料費","value":0,"verified":1},{"version":"old","material":"PEP","kind":"pipe","caliber":500,"item":"每增加1公尺工料費","value":0,"verified":1},{"version":"old","material":"PEP","kind":"meter","caliber":500,"item":"水表組_平面","value":0,"verified":1},{"version":"old","material":"PEP","kind":"meter","caliber":500,"item":"水表組_立式","value":0,"verified":1},{"version":"old","material":"PEP","kind":"pipe","caliber":600,"item":"接水處","value":0,"verified":1},{"version":"old","material":"PEP","kind":"pipe","caliber":600,"item":"基本4公尺工料費","value":0,"verified":1},{"version":"old","material":"PEP","kind":"pipe","caliber":600,"item":"每增加1公尺工料費","value":0,"verified":1},{"version":"old","material":"PEP","kind":"meter","caliber":600,"item":"水表組_平面","value":0,"verified":1},{"version":"old","material":"PEP","kind":"meter","caliber":600,"item":"水表組_立式","value":0,"verified":1},{"version":"old","material":"SSP","kind":"pipe","caliber":13,"item":"接水處","value":0,"verified":1},{"version":"old","material":"SSP","kind":"pipe","caliber":13,"item":"基本4公尺工料費","value":0,"verified":1},{"version":"old","material":"SSP","kind":"pipe","caliber":13,"item":"每增加1公尺工料費","value":0,"verified":1},{"version":"old","material":"SSP","kind":"meter","caliber":13,"item":"水表組_平面","value":0,"verified":1},{"version":"old","material":"SSP","kind":"meter","caliber":13,"item":"水表組_立式","value":0,"verified":1},{"version":"old","material":"SSP","kind":"pipe","caliber":20,"item":"接水處","value":9676,"verified":1},{"version":"old","material":"SSP","kind":"pipe","caliber":20,"item":"基本4公尺工料費","value":18875,"verified":1},{"version":"old","material":"SSP","kind":"pipe","caliber":20,"item":"每增加1公尺工料費","value":1710,"verified":1},{"version":"old","material":"SSP","kind":"meter","caliber":20,"item":"水表組_平面","value":2720,"verified":1},{"version":"old","material":"SSP","kind":"meter","caliber":20,"item":"水表組_立式","value":2720,"verified":1},{"version":"old","material":"SSP","kind":"pipe","caliber":25,"item":"接水處","value":9834,"verified":1},{"version":"old","material":"SSP","kind":"pipe","caliber":25,"item":"基本4公尺工料費","value":23150,"verified":1},{"version":"old","material":"SSP","kind":"pipe","caliber":25,"item":"每增加1公尺工料費","value":1900,"verified":1},{"version":"old","material":"SSP","kind":"meter","caliber":25,"item":"水表組_平面","value":3665,"verified":1},{"version":"old","material":"SSP","kind":"meter","caliber":25,"item":"水表組_立式","value":3665,"verified":1},{"version":"old","material":"SSP","kind":"pipe","caliber":40,"item":"接水處","value":17755,"verified":1},{"version":"old","material":"SSP","kind":"pipe","caliber":40,"item":"基本4公尺工料費","value":33155,"verified":1},{"version":"old","material":"SSP","kind":"pipe","caliber":40,"item":"每增加1公尺工料費","value":2310,"verified":1},{"version":"old","material":"SSP","kind":"meter","caliber":40,"item":"水表組_平面","value":5480,"verified":1},{"version":"old","material":"SSP","kind":"meter","caliber":40,"item":"水表組_立式","value":5480,"verified":1},{"version":"old","material":"SSP","kind":"pipe","caliber":50,"item":"接水處","value":25080,"verified":1},{"version":"old","material":"SSP","kind":"pipe","caliber":50,"item":"基本4公尺工料費","value":38825,"verified":1},{"version":"old","material":"SSP","kind":"pipe","caliber":50,"item":"每增加1公尺工料費","value":2865,"verified":1},{"version":"old","material":"SSP","kind":"meter","caliber":50,"item":"水表組_平面","value":37705,"verified":1},{"version":"old","material":"SSP","kind":"meter","caliber":50,"item":"水表組_立式","value":37705,"verified":1},{"version":"old","material":"SSP","kind":"pipe","caliber":80,"item":"接水處","value":0,"verified":1},{"version":"old","material":"SSP","kind":"pipe","caliber":80,"item":"基本4公尺工料費","value":0,"verified":1},{"version":"old","material":"SSP","kind":"pipe","caliber":80,"item":"每增加1公尺工料費","value":0,"verified":1},{"version":"old","material":"SSP","kind":"meter","caliber":80,"item":"水表組_平面","value":0,"verified":1},{"version":"old","material":"SSP","kind":"meter","caliber":80,"item":"水表組_立式","value":0,"verified":1},{"version":"old","material":"SSP","kind":"pipe","caliber":100,"item":"接水處","value":0,"verified":1},{"version":"old","material":"SSP","kind":"pipe","caliber":100,"item":"基本4公尺工料費","value":0,"verified":1},{"version":"old","material":"SSP","kind":"pipe","caliber":100,"item":"每增加1公尺工料費","value":0,"verified":1},{"version":"old","material":"SSP","kind":"meter","caliber":100,"item":"水表組_平面","value":0,"verified":1},{"version":"old","material":"SSP","kind":"meter","caliber":100,"item":"水表組_立式","value":0,"verified":1},{"version":"old","material":"SSP","kind":"pipe","caliber":150,"item":"接水處","value":0,"verified":1},{"version":"old","material":"SSP","kind":"pipe","caliber":150,"item":"基本4公尺工料費","value":0,"verified":1},{"version":"old","material":"SSP","kind":"pipe","caliber":150,"item":"每增加1公尺工料費","value":0,"verified":1},{"version":"old","material":"SSP","kind":"meter","caliber":150,"item":"水表組_平面","value":0,"verified":1},{"version":"old","material":"SSP","kind":"meter","caliber":150,"item":"水表組_立式","value":0,"verified":1},{"version":"old","material":"SSP","kind":"pipe","caliber":200,"item":"接水處","value":0,"verified":1},{"version":"old","material":"SSP","kind":"pipe","caliber":200,"item":"基本4公尺工料費","value":0,"verified":1},{"version":"old","material":"SSP","kind":"pipe","caliber":200,"item":"每增加1公尺工料費","value":0,"verified":1},{"version":"old","material":"SSP","kind":"meter","caliber":200,"item":"水表組_平面","value":0,"verified":1},{"version":"old","material":"SSP","kind":"meter","caliber":200,"item":"水表組_立式","value":0,"verified":1},{"version":"old","material":"SSP","kind":"pipe","caliber":250,"item":"接水處","value":0,"verified":1},{"version":"old","material":"SSP","kind":"pipe","caliber":250,"item":"基本4公尺工料費","value":0,"verified":1},{"version":"old","material":"SSP","kind":"pipe","caliber":250,"item":"每增加1公尺工料費","value":0,"verified":1},{"version":"old","material":"SSP","kind":"meter","caliber":250,"item":"水表組_平面","value":0,"verified":1},{"version":"old","material":"SSP","kind":"meter","caliber":250,"item":"水表組_立式","value":0,"verified":1},{"version":"old","material":"SSP","kind":"pipe","caliber":300,"item":"接水處","value":0,"verified":1},{"version":"old","material":"SSP","kind":"pipe","caliber":300,"item":"基本4公尺工料費","value":0,"verified":1},{"version":"old","material":"SSP","kind":"pipe","caliber":300,"item":"每增加1公尺工料費","value":0,"verified":1},{"version":"old","material":"SSP","kind":"meter","caliber":300,"item":"水表組_平面","value":0,"verified":1},{"version":"old","material":"SSP","kind":"meter","caliber":300,"item":"水表組_立式","value":0,"verified":1},{"version":"old","material":"SSP","kind":"pipe","caliber":350,"item":"接水處","value":0,"verified":1},{"version":"old","material":"SSP","kind":"pipe","caliber":350,"item":"基本4公尺工料費","value":0,"verified":1},{"version":"old","material":"SSP","kind":"pipe","caliber":350,"item":"每增加1公尺工料費","value":0,"verified":1},{"version":"old","material":"SSP","kind":"meter","caliber":350,"item":"水表組_平面","value":0,"verified":1},{"version":"old","material":"SSP","kind":"meter","caliber":350,"item":"水表組_立式","value":0,"verified":1},{"version":"old","material":"SSP","kind":"pipe","caliber":400,"item":"接水處","value":0,"verified":1},{"version":"old","material":"SSP","kind":"pipe","caliber":400,"item":"基本4公尺工料費","value":0,"verified":1},{"version":"old","material":"SSP","kind":"pipe","caliber":400,"item":"每增加1公尺工料費","value":0,"verified":1},{"version":"old","material":"SSP","kind":"meter","caliber":400,"item":"水表組_平面","value":0,"verified":1},{"version":"old","material":"SSP","kind":"meter","caliber":400,"item":"水表組_立式","value":0,"verified":1},{"version":"old","material":"SSP","kind":"pipe","caliber":450,"item":"接水處","value":0,"verified":1},{"version":"old","material":"SSP","kind":"pipe","caliber":450,"item":"基本4公尺工料費","value":0,"verified":1},{"version":"old","material":"SSP","kind":"pipe","caliber":450,"item":"每增加1公尺工料費","value":0,"verified":1},{"version":"old","material":"SSP","kind":"meter","caliber":450,"item":"水表組_平面","value":0,"verified":1},{"version":"old","material":"SSP","kind":"meter","caliber":450,"item":"水表組_立式","value":0,"verified":1},{"version":"old","material":"SSP","kind":"pipe","caliber":500,"item":"接水處","value":0,"verified":1},{"version":"old","material":"SSP","kind":"pipe","caliber":500,"item":"基本4公尺工料費","value":0,"verified":1},{"version":"old","material":"SSP","kind":"pipe","caliber":500,"item":"每增加1公尺工料費","value":0,"verified":1},{"version":"old","material":"SSP","kind":"meter","caliber":500,"item":"水表組_平面","value":0,"verified":1},{"version":"old","material":"SSP","kind":"meter","caliber":500,"item":"水表組_立式","value":0,"verified":1},{"version":"old","material":"SSP","kind":"pipe","caliber":600,"item":"接水處","value":0,"verified":1},{"version":"old","material":"SSP","kind":"pipe","caliber":600,"item":"基本4公尺工料費","value":0,"verified":1},{"version":"old","material":"SSP","kind":"pipe","caliber":600,"item":"每增加1公尺工料費","value":0,"verified":1},{"version":"old","material":"SSP","kind":"meter","caliber":600,"item":"水表組_平面","value":0,"verified":1},{"version":"old","material":"SSP","kind":"meter","caliber":600,"item":"水表組_立式","value":0,"verified":1}];
+const SEED_CONN_DATA = [{"caliber":13,"value":400,"verified":1},{"caliber":20,"value":700,"verified":1},{"caliber":25,"value":1500,"verified":1},{"caliber":40,"value":3750,"verified":1},{"caliber":50,"value":7000,"verified":1},{"caliber":80,"value":18800,"verified":1},{"caliber":100,"value":35000,"verified":1},{"caliber":150,"value":87500,"verified":1},{"caliber":200,"value":162500,"verified":1},{"caliber":250,"value":228000,"verified":1},{"caliber":300,"value":330000,"verified":1},{"caliber":350,"value":440000,"verified":1},{"caliber":400,"value":600000,"verified":1},{"caliber":450,"value":700000,"verified":1},{"caliber":500,"value":880000,"verified":1},{"caliber":600,"value":1200000,"verified":1}];
+
+// 資料來源：01新版.pdf「用戶進水管新(改)裝工程費統一收費標準表」（僅取回填CLSM欄位）、
+// 02舊版.pdf「用戶進水管新裝工程費統一收費標準表」附件一（僅取日間欄位），2026/08/11 逐格核對匯入。
+// 裝表費不分管材，同一口徑在六種管材代碼下數值相同，方便不論選哪個管材都能查到。
+function seedRates(){
+  return SEED_RATES_DATA.map(r=>({...r, verified: !!r.verified}));
+}
+function seedConn(){
+  return SEED_CONN_DATA.map(r=>({...r, verified: !!r.verified}));
+}
+
+let RATES = [];       // seedRates() 格式陣列
+let CONN = [];        // seedConn() 格式陣列
+let SERVICE_FEE = {new:1050, old:500};
+let CASES = [];        // 已存檔案件快取
+
+/* ============================================================
+   Storage helpers
+   ============================================================ */
+async function loadOrSeedRates(){
+  try{
+    const r = await storageGet('rates-config', true);
+    const cfg = JSON.parse(r.value);
+    RATES = cfg.rates || seedRates();
+    CONN = cfg.conn || seedConn();
+    // 舊資料可能沒存 serviceFee（例如更早期版本存的雲端資料），用內建預設值兜底，避免服務費「消失」
+    SERVICE_FEE = cfg.serviceFee || {new:1050, old:500};
+    seedOutdated = (cfg.seedVersion !== SEED_VERSION);
+  }catch(e){
+    RATES = seedRates(); CONN = seedConn(); SERVICE_FEE = {new:1050, old:500};
+    seedOutdated = false;
+    await saveRatesConfig();
+  }
+}
+async function saveRatesConfigLocalOnly(){
+  await storageSet('rates-config', JSON.stringify({rates:RATES, conn:CONN, serviceFee:SERVICE_FEE, seedVersion:SEED_VERSION}), true);
+}
+async function saveRatesConfig(){
+  // 本機（跨使用者共用）快取，離線或尚未設定 Google 試算表時仍可運作
+  await saveRatesConfigLocalOnly();
+  // 已設定 Google 試算表時，試算表才是「正式」的單一資料來源，一併覆蓋寫入
+  if(GAS_URL){
+    const r = await gasPost('saveAllRates', {rates:RATES, conn:CONN, serviceFee:SERVICE_FEE, seedVersion:SEED_VERSION});
+    document.getElementById('gas-msg').textContent = (r&&r.ok) ? '費率已同步到 Google 試算表' : '⚠ 費率同步到 Google 試算表失敗：'+((r&&r.error)||'未知錯誤')+'（本機仍已存檔，可按「立即同步全部案件到 Sheet」重試，或檢查 URL／部署權限）';
+  }
+}
+async function resetRates(){
+  RATES = seedRates(); CONN = seedConn(); SERVICE_FEE={new:1050,old:500};
+  seedOutdated = false;
+  await saveRatesConfig(); renderRateTable(); renderConnTable(); document.getElementById('svc-new').value=SERVICE_FEE.new; document.getElementById('svc-old').value=SERVICE_FEE.old;
+  renderSeedNotice();
+}
+function renderSeedNotice(){
+  const el = document.getElementById('seed-outdated-notice');
+  if(!el) return;
+  el.style.display = seedOutdated ? 'block' : 'none';
+}
+
+function lookupRate(version, material, kind, caliber, item){
+  const row = RATES.find(r=>r.version===version && r.material===material && r.kind===kind && +r.caliber===+caliber && r.item===item);
+  return row ? {value:+row.value, verified: !!row.verified} : {value:0, verified:false};
+}
+function lookupConn(caliber){
+  const row = CONN.find(r=>+r.caliber===+caliber);
+  return row ? {value:+row.value, verified:!!row.verified} : {value:0, verified:false};
+}
+
+/* ============================================================
+   INPUT TAB — dynamic row builder
+   ============================================================ */
+function blankSpec(){
+  rowCounter++;
+  return { id:'r'+rowCounter, caliber:20, count:1, length:4,
+           materialNew:'SSP', materialOld:'PVCP', position:'平面', stopcock:'自備' };
+}
+function addRow(group){
+  state[group].push(blankSpec());
+  renderRows(group);
+}
+function removeRow(group, id){
+  state[group] = state[group].filter(r=>r.id!==id);
+  renderRows(group);
+}
+function calibOptions(sel){
+  return CALIBERS.map(c=>`<option value="${c}" ${+sel===c?'selected':''}>${c} mm</option>`).join('');
+}
+function matOptions(sel){
+  return MATERIALS.map(m=>`<option value="${m}" ${sel===m?'selected':''}>${MATERIAL_LABEL[m]}</option>`).join('');
+}
+function renderRows(group){
+  const el = document.getElementById('rows-'+group);
+  if(state[group].length===0){ el.innerHTML = `<p style="color:var(--ink-soft);font-size:12.5px;">尚未新增規格，請點下方按鈕新增一組。</p>`; return; }
+  const isNewSub = (group==='sub');
+  el.innerHTML = state[group].map(spec=>{
+    const showPos = spec.caliber <= POSITION_MAX_CALIBER;
+    return `
+    <div class="group-row" data-id="${spec.id}">
+      <button class="rm" title="刪除這組" onclick="removeRow('${group}','${spec.id}')">✕</button>
+      ${isNewSub ? `<div class="notice info" style="margin:0 0 10px;">分表在新版只計算【服務費】＋【接水費】＋【裝表費】，不計算水表組與工料費（規則見新舊比較表備註 3、4）。</div>` : ''}
+      <div class="grid">
+        <div class="field"><label>口徑</label><select onchange="updSpec('${group}','${spec.id}','caliber',this.value)">${calibOptions(spec.caliber)}</select></div>
+        <div class="field"><label>顆數</label><input type="number" min="0" value="${spec.count}" onchange="updSpec('${group}','${spec.id}','count',this.value)"></div>
+        <div class="field"><label>管線總長度（公尺，基本內含4米）</label><input type="number" min="0" value="${spec.length}" onchange="updSpec('${group}','${spec.id}','length',this.value)" ${isNewSub?'disabled title="新版分表不計工料費，長度僅供舊版使用"':''}></div>
+        <div class="field"><label>新版管材</label><select onchange="updSpec('${group}','${spec.id}','materialNew',this.value)">${matOptions(spec.materialNew)}</select></div>
+        <div class="field"><label>舊版管材</label><select onchange="updSpec('${group}','${spec.id}','materialOld',this.value)">${matOptions(spec.materialOld)}</select></div>
+        ${showPos ? `<div class="field"><label>表位</label><select onchange="updSpec('${group}','${spec.id}','position',this.value)">
+            <option ${spec.position==='平面'?'selected':''}>平面</option><option ${spec.position==='立式'?'selected':''}>立式</option></select></div>` : ''}
+        <div class="field"><label>伸縮止水栓（影響新版裝表費）</label><select onchange="updSpec('${group}','${spec.id}','stopcock',this.value)">
+            <option value="自備" ${spec.stopcock==='自備'?'selected':''}>用戶自備</option><option value="供料" ${spec.stopcock==='供料'?'selected':''}>本公司供料</option></select></div>
+      </div>
+    </div>`;
+  }).join('');
+}
+function updSpec(group,id,field,value){
+  const spec = state[group].find(r=>r.id===id);
+  if(!spec) return;
+  spec[field] = ['count','length','caliber'].includes(field) ? +value : value;
+  if(field==='caliber') renderRows(group); // 可能顯示/隱藏 表位欄
+}
+
+/* ============================================================
+   計算引擎
+   ============================================================ */
+function calcForVersion(version){
+  const material = (spec)=> version==='new'? spec.materialNew : spec.materialOld;
+  const lines = [];
+  let totalMeterCount = 0;
+
+  ['main','indep','sub'].forEach(group=>{
+    state[group].forEach(spec=>{
+      const count = spec.count||0;
+      if(count<=0) return;
+      totalMeterCount += count;
+      const mat = material(spec);
+      const excess = Math.max((spec.length||0) - 4, 0);
+      // 新版-分表：只計【服務費】+【接水費】+【裝表費】，不計水表組/工料費（新舊比較表備註3、4）
+      // 舊版-總表：暫只計【服務費】，其餘項目暫不計算（新舊比較表備註10，屬暫定規則，日後確認後請調整此處）
+      const skipPipeCost = (version==='new' && group==='sub') || (version==='old' && group==='main');
+      // 舊版-分表：不計【水表組】費用，假定用戶自行處理（新舊比較表備註9）
+      const skipMeterOnly = (version==='old' && group==='sub');
+
+      // 水表組依「表位」（平面/立式）查不同欄位；口徑>50mm時介面隱藏表位選擇，但仍需一個值，一律以目前 spec.position 查（DIP等單一水表組數值的管材，平面/立式欄位已填入相同數字，查哪個都一樣）
+      const meterItem = (spec.position === '立式') ? '水表組_立式' : '水表組_平面';
+      // 裝表費依「伸縮止水栓」（自備/供料）查不同欄位；裝表費本身與管材無關，只依口徑
+      const installItem = (spec.stopcock === '供料' || spec.stopcock === '本公司供料') ? '裝表費_供料' : '裝表費_自備';
+
+      const jieShuiChu = skipPipeCost ? {value:0,verified:true} : lookupRate(version,mat,'pipe',spec.caliber,'接水處');
+      const shuiBiao   = (skipPipeCost || skipMeterOnly) ? {value:0,verified:true} : lookupRate(version,mat,'meter',spec.caliber,meterItem);
+      const base4m     = skipPipeCost ? {value:0,verified:true} : lookupRate(version,mat,'pipe',spec.caliber,'基本4公尺工料費');
+      const perM        = skipPipeCost ? {value:0,verified:true} : lookupRate(version,mat,'pipe',spec.caliber,'每增加1公尺工料費');
+      const install     = version==='new' ? lookupRate(version,mat,'pipe',spec.caliber,installItem) : {value:0,verified:true};
+      const conn         = group==='main' ? {value:0,verified:true} : lookupConn(spec.caliber);
+
+      const pipeUnit = jieShuiChu.value + shuiBiao.value + base4m.value + perM.value*excess;
+      const pipeSubtotal = pipeUnit * count;
+      const connSubtotal = conn.value * count;
+      const installSubtotal = install.value * count;
+
+      lines.push({
+        group, groupLabel:TABLE_TYPES[group], caliber:spec.caliber,
+        material:mat, count, length:spec.length, excess, position:spec.position, stopcock:spec.stopcock, skipPipeCost,
+        接水處:jieShuiChu, 水表組:shuiBiao, 基本4M:base4m, 每加1M:perM, 裝表費:install, 接水費:conn,
+        pipeUnit, pipeSubtotal, connSubtotal, installSubtotal,
+        lineTotal: pipeSubtotal + connSubtotal + installSubtotal,
+        anyUnverified: [jieShuiChu,shuiBiao,base4m,perM,install,conn].some(x=>!x.verified)
+      });
+    });
+  });
+
+  const pipeTotal = lines.reduce((s,l)=>s+l.pipeSubtotal,0);
+  const connTotal = lines.reduce((s,l)=>s+l.connSubtotal,0);
+  const installTotal = lines.reduce((s,l)=>s+l.installSubtotal,0);
+  const serviceTotal = totalMeterCount * (SERVICE_FEE[version]||0);
+  const grandTotal = pipeTotal + connTotal + installTotal + serviceTotal;
+
+  return {version, lines, pipeTotal, connTotal, installTotal, serviceTotal, totalMeterCount, grandTotal,
+           hasUnverified: lines.some(l=>l.anyUnverified)};
+}
+
+let lastResult = null;
+function calculate(){
+  const newR = calcForVersion('new');
+  const oldR = calcForVersion('old');
+  lastResult = {new:newR, old:oldR};
+  renderResult(lastResult);
+  return lastResult;
+}
+
+function fmt(n){ return Math.round(n).toLocaleString('zh-TW'); }
+
+function renderResult(res){
+  const diff = res.new.grandTotal - res.old.grandTotal;
+  const pct = res.old.grandTotal ? (diff/res.old.grandTotal*100) : 0;
+  const warn = (res.new.hasUnverified||res.old.hasUnverified)
+    ? `<div class="notice">⚠ 本次計算中，有部分費率項目尚未核對（顯示為 0 或未確認數字），下方明細會標示「需補充」。請至費率管理頁確認後再作為正式報價依據。</div>` : '';
+  document.getElementById('result-area').innerHTML = `
+    ${warn}
+    <div class="compare-wrap">
+      <div class="ver-card new"><div class="label">新版總金額</div><div class="total nums">$ ${fmt(res.new.grandTotal)}</div></div>
+      <div class="ver-card old"><div class="label">舊版總金額</div><div class="total nums">$ ${fmt(res.old.grandTotal)}</div></div>
+      <div class="diff-banner">
+        <div>新舊版差額（新版 − 舊版）</div>
+        <div class="amt nums ${diff>=0?'up':'down'}">${diff>=0?'+':''}$ ${fmt(diff)}　（${diff>=0?'+':''}${pct.toFixed(1)}%）</div>
+      </div>
+    </div>
+    ${breakdownHtml('新版', res.new)}
+    ${breakdownHtml('舊版', res.old)}
+  `;
+}
+function breakdownHtml(label, r){
+  const svcPerMeter = r.totalMeterCount ? (r.serviceTotal / r.totalMeterCount) : (SERVICE_FEE[r.version]||0);
+  const rows = r.lines.map(l=>{
+    const svcLine = l.count * svcPerMeter;
+    return `
+    <tr>
+      <td>${l.groupLabel}</td>
+      <td>${l.material}</td>
+      <td>${l.caliber}mm</td>
+      <td>${l.count}</td>
+      <td>${l.skipPipeCost ? '—' : l.length}</td>
+      <td class="nums">${fmt(l.接水處.value)}</td>
+      <td class="nums">${fmt(l.水表組.value)}</td>
+      <td class="nums">${fmt(l.基本4M.value)}</td>
+      <td class="nums">${fmt(l.每加1M.value)}×${l.excess}</td>
+      <td class="nums">${fmt(l.接水費.value)}</td>
+      <td class="nums">${fmt(l.裝表費.value)}</td>
+      <td class="nums">${fmt(svcLine)}</td>
+      <td class="nums">${fmt(l.lineTotal + svcLine)}</td>
+      <td>${l.anyUnverified?'<span class="badge warn">需補充</span>':'<span class="badge ok">已核對</span>'}</td>
+    </tr>`;}).join('');
+  return `
+  <details class="breakdown">
+    <summary>${label}明細（管線費 $${fmt(r.pipeTotal)} ＋ 接水費 $${fmt(r.connTotal)} ＋ 裝表費 $${fmt(r.installTotal)} ＋ 服務費 $${fmt(r.serviceTotal)}（${r.totalMeterCount} 顆表）＝ $${fmt(r.grandTotal)}）</summary>
+    <table class="bk-table">
+      <thead><tr><th>表別</th><th>管材</th><th>口徑</th><th>顆數</th><th>長度</th><th>接水處</th><th>水表組</th><th>基本4M</th><th>每加1M×超出</th><th>接水費/顆</th><th>裝表費/顆</th><th>服務費</th><th>小計</th><th>狀態</th></tr></thead>
+      <tbody>${rows || '<tr><td colspan="14" style="text-align:center;color:var(--ink-soft)">尚無資料</td></tr>'}</tbody>
+    </table>
+  </details>`;
+}
+
+/* ============================================================
+   存檔 / 讀取案件
+   ============================================================ */
+function genId(){ return 'c'+Date.now()+Math.random().toString(36).slice(2,7); }
+
+async function saveCase(){
+  const res = calculate();
+  const unit = document.getElementById('f-unit').value.trim();
+  const caseno = document.getElementById('f-caseno').value.trim();
+  const date = document.getElementById('f-date').value || new Date().toISOString().slice(0,10);
+  const type = document.getElementById('f-type').value;
+  const project = document.getElementById('f-project').value.trim();
+  const address = document.getElementById('f-address').value.trim();
+  if(!unit){ alert('請填寫單位名稱'); return; }
+  const isEdit = !!editingCaseId;
+  const id = editingCaseId || genId();
+  const record = { id, unit, caseno, date, type, project, address, groups: JSON.parse(JSON.stringify(state)),
+                    result: { new: summarize(res.new), old: summarize(res.old) }, savedAt: new Date().toISOString() };
+  let localOk = true;
+  try{
+    await storageSet('case:'+id, JSON.stringify(record), true);
+  }catch(e){
+    localOk = false; // 本機快取失敗不中止流程，雲端試算表才是真正重要的地方
+  }
+  const idx = CASES.findIndex(c=>c.id===id);
+  if(idx>-1) CASES[idx] = record; else CASES.push(record);
+  let msg = localOk ? `已${isEdit?'更新':'存檔'}（案號 ${caseno||id}）` : `已計算（案號 ${caseno||id}，本機瀏覽器快取寫入失敗，不影響下面的雲端同步）`;
+  if(GAS_URL){
+    const r = await gasPost('saveCase', caseToFlatRow(record));
+    msg += (r && r.ok) ? '，已同步至 Google 試算表' : `，同步 Google 試算表失敗：${(r&&r.error)||'未知錯誤'}（可稍後在費率管理頁按「立即同步全部案件到 Sheet」重試）`;
+  } else if(!localOk){
+    msg += '；且尚未設定 Google 試算表，此筆案件目前只留在畫面上，重新整理頁面就會不見，請盡快到「費率管理」頁設定試算表網址。';
+  }
+  document.getElementById('save-msg').textContent = msg;
+  if(isEdit) clearEditFlag_();
+}
+let editingCaseId = null;
+function clearEditFlag_(){
+  editingCaseId = null;
+  const banner = document.getElementById('edit-mode-banner');
+  if(banner) banner.style.display = 'none';
+  const btn = document.getElementById('save-btn');
+  if(btn) btn.textContent = '存檔到雲端';
+}
+function enterEditMode(id, caseno){
+  editingCaseId = id;
+  document.getElementById('edit-mode-banner').style.display = '';
+  document.getElementById('edit-mode-caseno').textContent = caseno || id;
+  document.getElementById('save-btn').textContent = '更新這筆案件';
+}
+function exitEditMode(){
+  clearEditFlag_();
+  resetForm();
+}
+function summarize(r){
+  return { pipeTotal:r.pipeTotal, connTotal:r.connTotal, installTotal:r.installTotal, serviceTotal:r.serviceTotal,
+           totalMeterCount:r.totalMeterCount, grandTotal:r.grandTotal, hasUnverified:r.hasUnverified, lines:r.lines };
+}
+function resetForm(){
+  state.main=[]; state.indep=[]; state.sub=[];
+  renderRows('main'); renderRows('indep'); renderRows('sub');
+  document.getElementById('result-area').innerHTML='';
+  document.getElementById('save-msg').textContent='';
+  document.getElementById('f-caseno').value=''; document.getElementById('f-project').value=''; document.getElementById('f-address').value='';
+  clearEditFlag_(); // 清空表單一律視為離開編輯模式，避免誤把新內容存回舊案件
+}
+
+async function reloadCases(){
+  document.getElementById('status-left').textContent = '讀取案件中…';
+  if(GAS_URL){
+    const ok = await loadFromCloudIfConfigured();
+    if(!ok){
+      document.getElementById('status-left').textContent = '⚠ 讀取 Google 試算表失敗，改讀本機共用快取';
+    }
+  }
+  if(!GAS_URL){
+    try{
+      const idx = await storageList('case:', true);
+      const keys = (idx && idx.keys) || [];
+      const results = await Promise.all(keys.map(k=>storageGet(k,true).catch(()=>null)));
+      CASES = results.filter(Boolean).map(r=>{ try{return JSON.parse(r.value);}catch(e){return null;} }).filter(Boolean);
+    }catch(e){ CASES = []; }
+  }
+  document.getElementById('status-left').textContent = `已載入 ${CASES.length} 筆案件`;
+  populateUnitFilter();
+  renderAnalysis();
+}
+function populateUnitFilter(){
+  const units = [...new Set(CASES.map(c=>c.unit).filter(Boolean))].sort();
+  const sel = document.getElementById('flt-unit');
+  const cur = sel.value;
+  sel.innerHTML = '<option value="">全部</option>' + units.map(u=>`<option value="${u}">${u}</option>`).join('');
+  sel.value = cur;
+}
+
+/* ============================================================
+   分析頁
+   ============================================================ */
+function groupKeyOf(c, by){
+  if(by==='unit') return c.unit || '（未填單位）';
+  if(by==='type') return c.type || '（未填類型）';
+  if(by==='month') return (c.date||'').slice(0,7) || '（未填日期）';
+  return '其他';
+}
+function filteredCases(){
+  const u = document.getElementById('flt-unit').value;
+  const t = document.getElementById('flt-type').value;
+  const from = document.getElementById('flt-from').value;
+  const to = document.getElementById('flt-to').value;
+  const q = (document.getElementById('flt-search').value||'').trim().toLowerCase();
+  return CASES.filter(c=>{
+    if(u && c.unit!==u) return false;
+    if(t && c.type!==t) return false;
+    if(from && c.date < from) return false;
+    if(to && c.date > to) return false;
+    if(q){
+      const hay = [c.unit,c.caseno,c.project,c.address].filter(Boolean).join(' ').toLowerCase();
+      if(!hay.includes(q)) return false;
+    }
+    return true;
+  });
+}
+let flatSort = {field:'date', dir:-1};
+function sortFlat(field){
+  if(flatSort.field===field){ flatSort.dir *= -1; } else { flatSort = {field, dir: (field==='date'?-1:-1)}; }
+  renderAnalysis();
+}
+function renderFlatTable(cases){
+  const rows = cases.slice().sort((a,b)=>{
+    const f = flatSort.field;
+    let av, bv;
+    if(f==='newTotal'){ av=a.result?.new?.grandTotal||0; bv=b.result?.new?.grandTotal||0; }
+    else if(f==='oldTotal'){ av=a.result?.old?.grandTotal||0; bv=b.result?.old?.grandTotal||0; }
+    else if(f==='diff'){ av=(a.result?.new?.grandTotal||0)-(a.result?.old?.grandTotal||0); bv=(b.result?.new?.grandTotal||0)-(b.result?.old?.grandTotal||0); }
+    else { av=(a[f]||''); bv=(b[f]||''); }
+    if(av<bv) return -1*flatSort.dir; if(av>bv) return 1*flatSort.dir; return 0;
+  });
+  document.getElementById('flat-tbody').innerHTML = rows.map(c=>{
+    const cn=c.result?.new?.grandTotal||0, co=c.result?.old?.grandTotal||0, cd=cn-co;
+    const pct = co ? (cd/co*100) : 0;
+    return `<tr>
+      <td class="nums">${(c.date||'').replaceAll('-','/')}</td>
+      <td>${c.unit||''}</td>
+      <td>${c.caseno||''}</td>
+      <td>${c.project||''}</td>
+      <td>${c.address||''}</td>
+      <td>${c.type||''}</td>
+      <td class="num nums">${c.result?.new?.totalMeterCount||0}</td>
+      <td class="num nums">${fmt(cn)}</td>
+      <td class="num nums">${fmt(co)}</td>
+      <td class="num nums"><span class="pill ${cd>=0?'up':'down'}">${cd>=0?'+':''}${fmt(cd)}</span></td>
+      <td class="num nums">${pct.toFixed(1)}%</td>
+      <td class="num"><button class="btn ghost" style="padding:3px 9px;font-size:11px;" onclick="showCaseDetail('${c.id}')">明細</button></td>
+    </tr>`;
+  }).join('') || `<tr><td colspan="12" style="text-align:center;color:var(--ink-soft);padding:20px;">目前沒有符合條件的案件</td></tr>`;
+}
+function renderAnalysis(){
+  const by = document.getElementById('grp-by').value;
+  const cases = filteredCases();
+  const groups = {};
+  cases.forEach(c=>{
+    const k = groupKeyOf(c, by);
+    (groups[k] = groups[k]||[]).push(c);
+  });
+  const totalNew = cases.reduce((s,c)=>s+(c.result?.new?.grandTotal||0),0);
+  const totalOld = cases.reduce((s,c)=>s+(c.result?.old?.grandTotal||0),0);
+  document.getElementById('analysis-summary').innerHTML = `
+    <h3>整體概況</h3>
+    <div class="grid g2" style="margin-top:10px;">
+      <div><div style="color:var(--ink-soft);font-size:11.5px;">案件數</div><div class="nums" style="font-size:20px;font-family:var(--disp)">${cases.length}</div></div>
+      <div><div style="color:var(--ink-soft);font-size:11.5px;">新版合計 / 舊版合計 / 差額</div>
+        <div class="nums" style="font-size:16px;">$${fmt(totalNew)} / $${fmt(totalOld)} /
+          <span style="color:${(totalNew-totalOld)>=0?'var(--up)':'var(--down)'}">${(totalNew-totalOld)>=0?'+':''}$${fmt(totalNew-totalOld)}</span></div>
+      </div>
+    </div>`;
+
+  renderFlatTable(cases);
+
+  const tbody = document.getElementById('agg-tbody');
+  const keys = Object.keys(groups).sort();
+  tbody.innerHTML = keys.map((k,gi)=>{
+    const list = groups[k];
+    const gn = list.reduce((s,c)=>s+(c.result?.new?.grandTotal||0),0);
+    const go = list.reduce((s,c)=>s+(c.result?.old?.grandTotal||0),0);
+    const diff = gn-go;
+    const pctAvg = list.length ? (list.reduce((s,c)=>{
+        const cn=c.result?.new?.grandTotal||0, co=c.result?.old?.grandTotal||0;
+        return s + (co? (cn-co)/co*100 : 0);
+      },0)/list.length) : 0;
+    return `
+      <tr>
+        <td>${k}</td><td class="num">${list.length}</td>
+        <td class="num nums">${fmt(gn)}</td><td class="num nums">${fmt(go)}</td>
+        <td class="num nums" style="color:${diff>=0?'var(--up)':'var(--down)'}">${diff>=0?'+':''}${fmt(diff)}</td>
+        <td class="num nums">${pctAvg.toFixed(1)}%</td>
+      </tr>`;
+  }).join('') || `<tr><td colspan="6" style="text-align:center;color:var(--ink-soft);padding:20px;">目前沒有符合條件的案件</td></tr>`;
+}
+function toggleGroup(id){
+  const el = document.getElementById(id);
+  el.style.display = el.style.display==='none' ? '' : 'none';
+}
+function toExcelDate_(dateStr){
+  if(!dateStr) return null;
+  const m = String(dateStr).match(/^(\d{4})-(\d{2})-(\d{2})/);
+  if(!m) return null;
+  return new Date(+m[1], +m[2]-1, +m[3]); // 用本地日期建構，避免 ISO 字串被當成 UTC 解析造成日期跑掉
+}
+function exportAnalysisExcel(){
+  const cases = filteredCases();
+  if(!cases.length){ alert('目前沒有符合篩選條件的案件可匯出'); return; }
+
+  // 分頁一：完整案件清單（時間/單位/案號/建案/地址/類型/新版金額/舊版金額/差異…，不含管線逐項明細）
+  const caseRows = cases.slice().sort((a,b)=> (a.date||'') < (b.date||'') ? -1 : 1).map(c=>{
+    const cn=c.result?.new?.grandTotal||0, co=c.result?.old?.grandTotal||0;
+    return {
+      '時間':toExcelDate_(c.date), '單位':c.unit||'', '案號':c.caseno||'', '建案名稱':c.project||'', '地址':c.address||'',
+      '類型':c.type||'', '表數':c.result?.new?.totalMeterCount||0,
+      '新版金額':Math.round(cn), '舊版金額':Math.round(co), '差額(新-舊)':Math.round(cn-co),
+      '差異%': co ? +((cn-co)/co*100).toFixed(1) : 0,
+      '存檔時間':c.savedAt ? new Date(c.savedAt) : null
+    };
+  });
+
+  // 分頁二：依目前「分組彙總」設定加總（選用，供快速對照，未展開也會匯出）
+  const by = document.getElementById('grp-by').value;
+  const groups = {};
+  cases.forEach(c=>{ const k=groupKeyOf(c,by); (groups[k]=groups[k]||[]).push(c); });
+  const groupRows = Object.keys(groups).sort().map(k=>{
+    const list = groups[k];
+    const gn = list.reduce((s,c)=>s+(c.result?.new?.grandTotal||0),0);
+    const go = list.reduce((s,c)=>s+(c.result?.old?.grandTotal||0),0);
+    const pctAvg = list.length ? (list.reduce((s,c)=>{
+        const cn=c.result?.new?.grandTotal||0, co=c.result?.old?.grandTotal||0;
+        return s + (co? (cn-co)/co*100 : 0);
+      },0)/list.length) : 0;
+    return {'分組':k, '案件數':list.length, '新版總額':Math.round(gn), '舊版總額':Math.round(go), '差額(新-舊)':Math.round(gn-go), '平均差異%':+pctAvg.toFixed(1)};
+  });
+
+  const wb = XLSX.utils.book_new();
+  const ws1 = XLSX.utils.json_to_sheet(caseRows, {cellDates:true});
+  // 把「時間」「存檔時間」欄位格式化成 Excel 看得懂的日期格式（欄位順序對應上面 caseRows 的 key 順序：A時間 ... L存檔時間）
+  const dateCols = ['A','L'];
+  const lastRow = caseRows.length + 1; // +1 因為第1列是標題
+  dateCols.forEach(col=>{
+    for(let r=2; r<=lastRow; r++){
+      const cellRef = col+r;
+      const cell = ws1[cellRef];
+      if(cell && cell.t==='d'){ cell.z = (col==='A') ? 'yyyy/mm/dd' : 'yyyy/mm/dd hh:mm'; }
+    }
+  });
+  XLSX.utils.book_append_sheet(wb, ws1, '案件清單(完整)');
+  XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(groupRows), '分組彙總(選用)');
+  XLSX.writeFile(wb, `案件清單_${new Date().toISOString().slice(0,10)}.xlsx`);
+}
+function showCaseDetail(id){
+  const c = CASES.find(x=>x.id===id);
+  if(!c) return;
+  const win = document.getElementById('result-area');
+  document.querySelector('nav.tabs button[data-tab="input"]').click();
+  document.getElementById('f-unit').value=c.unit; document.getElementById('f-caseno').value=c.caseno;
+  document.getElementById('f-date').value=c.date; document.getElementById('f-type').value=c.type;
+  document.getElementById('f-project').value=c.project||''; document.getElementById('f-address').value=c.address||'';
+  state.main=c.groups.main; state.indep=c.groups.indep; state.sub=c.groups.sub;
+  renderRows('main'); renderRows('indep'); renderRows('sub');
+  enterEditMode(c.id, c.caseno);
+  win.innerHTML = `<div class="notice info">已載入案件 ${c.caseno||id} 的內容到上面的表單，可直接修改任一欄位後按「更新這筆案件」即時修正（會覆蓋，不會另外新增）。</div>` +
+    `<div class="compare-wrap">
+      <div class="ver-card new"><div class="label">新版總金額</div><div class="total nums">$ ${fmt(c.result.new.grandTotal)}</div></div>
+      <div class="ver-card old"><div class="label">舊版總金額</div><div class="total nums">$ ${fmt(c.result.old.grandTotal)}</div></div>
+    </div>` + breakdownHtml('新版', c.result.new) + breakdownHtml('舊版', c.result.old);
+}
+
+/* ============================================================
+   費率管理頁
+   ============================================================ */
+function renderRateTable(){
+  document.getElementById('svc-new').value = SERVICE_FEE.new;
+  document.getElementById('svc-old').value = SERVICE_FEE.old;
+  document.getElementById('rate-count-tag').textContent = RATES.length + ' 筆';
+  const tbody = document.getElementById('rate-tbody');
+  tbody.innerHTML = RATES.map((r,i)=>`
+    <tr>
+      <td><select onchange="editRate(${i},'version',this.value)"><option value="new" ${r.version==='new'?'selected':''}>新版</option><option value="old" ${r.version==='old'?'selected':''}>舊版</option></select></td>
+      <td><select onchange="editRate(${i},'material',this.value)">${matOptions(r.material)}</select></td>
+      <td><select onchange="editRate(${i},'kind',this.value)"><option value="pipe" ${r.kind==='pipe'?'selected':''}>管線口徑</option><option value="meter" ${r.kind==='meter'?'selected':''}>水表口徑</option></select></td>
+      <td><select onchange="editRate(${i},'caliber',this.value)">${calibOptions(r.caliber)}</select></td>
+      <td><select onchange="editRate(${i},'item',this.value)">${ITEMS.map(it=>`<option ${r.item===it?'selected':''}>${it}</option>`).join('')}</select></td>
+      <td class="num"><input type="number" value="${r.value}" onchange="editRate(${i},'value',this.value)"></td>
+      <td>${r.verified?'<span class="badge ok">已核對</span>':'<span class="badge warn">需補充</span>'}
+        <input type="checkbox" ${r.verified?'checked':''} onchange="editRate(${i},'verified',this.checked)" title="標記為已核對">
+      </td>
+      <td><button class="rm" style="position:static;" onclick="removeRate(${i})">✕</button></td>
+    </tr>`).join('');
+}
+function editRate(i,field,value){
+  RATES[i][field] = field==='value' ? +value : (field==='caliber' ? +value : (field==='verified'? !!value : value));
+  saveRatesConfig();
+  if(field!=='value' && field!=='verified') renderRateTable();
+  else document.getElementById('rate-count-tag').textContent = RATES.length + ' 筆';
+}
+function removeRate(i){ RATES.splice(i,1); saveRatesConfig(); renderRateTable(); }
+function addRateRow(){ RATES.push({version:'new',material:'SSP',kind:'pipe',caliber:20,item:'接水處',value:0,verified:false}); saveRatesConfig(); renderRateTable(); }
+
+function renderConnTable(){
+  const tbody = document.getElementById('conn-tbody');
+  tbody.innerHTML = CONN.map((r,i)=>`
+    <tr>
+      <td><select onchange="editConn(${i},'caliber',this.value)">${calibOptions(r.caliber)}</select></td>
+      <td class="num"><input type="number" value="${r.value}" onchange="editConn(${i},'value',this.value)"></td>
+      <td>${r.verified?'<span class="badge ok">已核對</span>':'<span class="badge warn">需補充</span>'}
+        <input type="checkbox" ${r.verified?'checked':''} onchange="editConn(${i},'verified',this.checked)"></td>
+      <td><button class="rm" style="position:static;" onclick="removeConn(${i})">✕</button></td>
+    </tr>`).join('');
+}
+function editConn(i,field,value){
+  CONN[i][field] = field==='value' ? +value : (field==='caliber'?+value:(field==='verified'? !!value : value));
+  saveRatesConfig();
+  if(field==='caliber') renderConnTable();
+}
+function removeConn(i){ CONN.splice(i,1); saveRatesConfig(); renderConnTable(); }
+function addConnRow(){ CONN.push({caliber:20,value:0,verified:false}); saveRatesConfig(); renderConnTable(); }
+
+async function updateServiceFee(version, value){
+  SERVICE_FEE[version] = +value;
+  await saveRatesConfig();
+}
+
+/* CSV / Excel 匯入匯出 */
+function toCSV(rows, headers){
+  const esc = v => `"${String(v).replace(/"/g,'""')}"`;
+  return [headers.join(','), ...rows.map(r=>headers.map(h=>esc(r[h])).join(','))].join('\r\n');
+}
+function downloadTemplate(){
+  const rateHeaders=['version','material','kind','caliber','item','value','verified'];
+  const connHeaders=['caliber','value','verified'];
+  const csv = '## RATES (version,material,kind[pipe/meter],caliber,item,value,verified[0/1])\r\n' +
+    toCSV(RATES, rateHeaders) + '\r\n\r\n' +
+    '## CONN (caliber,value,verified[0/1]) — 接水費，依口徑，新舊版共用\r\n' +
+    toCSV(CONN, connHeaders);
+  const blob = new Blob(["\uFEFF"+csv], {type:'text/csv;charset=utf-8;'});
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob); a.download = '費率表_範本.csv'; a.click();
+}
+function parseCSVBlock(text){
+  const lines = text.split(/\r?\n/).filter(l=>l.trim().length && !l.startsWith('##'));
+  if(lines.length<2) return [];
+  const headers = lines[0].split(',').map(h=>h.replace(/^"|"$/g,''));
+  return lines.slice(1).map(line=>{
+    const cells = line.match(/(".*?"|[^,]+)(?=,|$)/g) || [];
+    const obj = {};
+    headers.forEach((h,i)=>{ let v=(cells[i]||'').replace(/^"|"$/g,'').replace(/""/g,'"'); obj[h]=v; });
+    return obj;
+  });
+}
+function handleRateUpload(evt){
+  const file = evt.target.files[0];
+  if(!file) return;
+  const isExcel = /\.xlsx?$/i.test(file.name);
+  const reader = new FileReader();
+  reader.onload = async (e)=>{
+    let rateRows=[], connRows=[];
+    if(isExcel){
+      const wb = XLSX.read(e.target.result, {type:'array'});
+      const rSheet = wb.Sheets['RATES'] || wb.Sheets[wb.SheetNames[0]];
+      const cSheet = wb.Sheets['CONN'] || wb.Sheets[wb.SheetNames[1]];
+      if(rSheet) rateRows = XLSX.utils.sheet_to_json(rSheet);
+      if(cSheet) connRows = XLSX.utils.sheet_to_json(cSheet);
+    } else {
+      const text = e.target.result;
+      const blocks = text.split(/##\s*CONN/i);
+      rateRows = parseCSVBlock(blocks[0]);
+      if(blocks[1]) connRows = parseCSVBlock('##CONN\r\n'+blocks[1].split('\r\n').filter(l=>!l.startsWith('##')).join('\r\n')).length
+        ? parseCSVBlock(blocks[1]) : [];
+      if(!connRows.length && blocks[1]) connRows = parseCSVBlock(blocks[1]);
+    }
+    if(rateRows.length){
+      RATES = rateRows.map(r=>({version:r.version, material:r.material, kind:r.kind, caliber:+r.caliber, item:r.item, value:+r.value, verified: (r.verified==1||r.verified==='1'||r.verified===true)}));
+    }
+    if(connRows.length){
+      CONN = connRows.map(r=>({caliber:+r.caliber, value:+r.value, verified:(r.verified==1||r.verified==='1'||r.verified===true)}));
+    }
+    await saveRatesConfig();
+    renderRateTable(); renderConnTable();
+    alert(`匯入完成：費率 ${RATES.length} 筆、接水費 ${CONN.length} 筆`);
+  };
+  if(isExcel) reader.readAsArrayBuffer(file); else reader.readAsText(file, 'UTF-8');
+}
+
+/* ============================================================
+   Google Apps Script（雲端硬碟／Google 試算表）同步
+   ============================================================ */
+// 【給部署 / 管理者】如果希望同仁打開這份 HTML 就自動接上雲端試算表、不用自己貼網址，
+// 把下面的網址換成你自己部署好的 Apps Script Web App URL（結尾 /exec）即可，存檔後重新發送這份 HTML 給大家。
+// 每個人仍然可以在「② 費率管理」頁自行貼上不同網址覆蓋這個預設值（例如測試用另一份試算表）。
+const DEFAULT_GAS_URL = 'https://script.google.com/macros/s/AKfycbzPQzP2dezHTiuB6U9N7pjxWgYfRlCKD-d1QxAM98s4BA5G_6pTVbvKIqXfbuW7pYzn/exec';
+let GAS_URL = '';
+
+async function loadGasUrl(){
+  try{
+    const r = await storageGet('gas-url', true);
+    GAS_URL = r.value || '';
+  }catch(e){ GAS_URL=''; }
+  if(!GAS_URL && DEFAULT_GAS_URL){ GAS_URL = DEFAULT_GAS_URL; }
+  document.getElementById('gas-url').value = GAS_URL;
+  document.getElementById('gas-status-tag').textContent = GAS_URL
+    ? (GAS_URL===DEFAULT_GAS_URL ? '已設定（系統預設）' : '已設定')
+    : '未設定';
+}
+async function saveGasUrl(val){
+  GAS_URL = (val||'').trim();
+  await storageSet('gas-url', GAS_URL, true);
+  document.getElementById('gas-status-tag').textContent = GAS_URL ? '已設定' : '未設定';
+  document.getElementById('gas-msg').textContent = GAS_URL ? '已儲存（單位共用）' : '';
+}
+function caseToFlatRow(c){
+  return {
+    id:c.id, unit:c.unit, caseno:c.caseno, date:c.date, type:c.type,
+    project:c.project||'', address:c.address||'', savedAt:c.savedAt,
+    newTotal: c.result.new.grandTotal, oldTotal: c.result.old.grandTotal,
+    diff: c.result.new.grandTotal - c.result.old.grandTotal,
+    diffPct: c.result.old.grandTotal ? ((c.result.new.grandTotal - c.result.old.grandTotal)/c.result.old.grandTotal*100) : 0,
+    meterCount: c.result.new.totalMeterCount,
+    fullJson: JSON.stringify(c)
+  };
+}
+function fetchWithTimeout_(url, opts, timeoutMs){
+  const controller = new AbortController();
+  const id = setTimeout(()=>controller.abort(), timeoutMs||20000);
+  return fetch(url, {...(opts||{}), signal: controller.signal}).finally(()=>clearTimeout(id));
+}
+async function gasPost(action, payload){
+  if(!GAS_URL) return {ok:false, error:'尚未設定 Google Apps Script URL'};
+  try{
+    const res = await fetchWithTimeout_(GAS_URL, {
+      method:'POST',
+      headers:{'Content-Type':'text/plain;charset=utf-8'}, // 避免預檢請求(CORS preflight)，GAS 端用 JSON.parse 解析
+      body: JSON.stringify({action, payload})
+    }, 20000);
+    const data = await res.json();
+    return data;
+  }catch(e){
+    const timedOut = e && (e.name==='AbortError');
+    return {ok:false, error: timedOut ? '連線逾時（20秒無回應）。請確認：部署時「執行身分」是否選「我」、「具有存取權的使用者」是否選「任何人」，以及網址結尾是否為 /exec' : String(e)};
+  }
+}
+async function gasPostCase(record){
+  const r = await gasPost('saveCase', caseToFlatRow(record));
+  return !!(r && r.ok);
+}
+async function gasFetchAll(){
+  if(!GAS_URL) return null;
+  try{
+    const res = await fetchWithTimeout_(GAS_URL, {method:'GET'}, 20000);
+    const data = await res.json();
+    return (data && data.ok) ? data : null;
+  }catch(e){ return null; }
+}
+function normalizeBool_(v){ return v===true || v==='TRUE' || v===1 || v==='1'; }
+async function loadFromCloudIfConfigured(){
+  if(!GAS_URL) return false;
+  const cloud = await gasFetchAll();
+  if(!cloud) return false;
+  if(cloud.rates && cloud.rates.length){
+    RATES = cloud.rates.map(r=>({...r, caliber:+r.caliber, value:+r.value, verified:normalizeBool_(r.verified)}));
+  }
+  if(cloud.conn && cloud.conn.length){
+    CONN = cloud.conn.map(r=>({...r, caliber:+r.caliber, value:+r.value, verified:normalizeBool_(r.verified)}));
+  }
+  if(cloud.config){
+    if(cloud.config.serviceFeeNew !== undefined && !isNaN(cloud.config.serviceFeeNew)) SERVICE_FEE.new = cloud.config.serviceFeeNew;
+    if(cloud.config.serviceFeeOld !== undefined && !isNaN(cloud.config.serviceFeeOld)) SERVICE_FEE.old = cloud.config.serviceFeeOld;
+    seedOutdated = !!(cloud.config.seedVersion && cloud.config.seedVersion !== SEED_VERSION);
+  }
+  await saveRatesConfigLocalOnly(); // 快取一份到本機共用儲存，離線時可先用這份
+  if(cloud.rows){
+    // 金額／明細一律以 fullJson（完整計算內容）為準；但單位/案號/日期/類型/建案/地址這幾個文字欄位
+    // 如果有人直接在 Google 試算表 Cases 分頁手動改過，這裡會優先採用試算表上的值，
+    // 這樣「手殘打錯字」用試算表直接修正也會同步回系統，不用回到系統裡重新編輯整筆。
+    CASES = cloud.rows.map(r=>{
+      try{
+        const full = JSON.parse(r.fullJson);
+        if(r.unit!==undefined && r.unit!=='') full.unit = r.unit;
+        if(r.caseno!==undefined) full.caseno = r.caseno;
+        if(r.date!==undefined && /^\d{4}-\d{2}-\d{2}/.test(String(r.date))) full.date = String(r.date).slice(0,10);
+        if(r.type!==undefined && r.type!=='') full.type = r.type;
+        if(r.project!==undefined) full.project = r.project;
+        if(r.address!==undefined) full.address = r.address;
+        return full;
+      }catch(e){ return null; }
+    }).filter(Boolean);
+  }
+  return true;
+}
+async function testGasConnection(){
+  document.getElementById('gas-msg').textContent = '連線測試中…';
+  const r = await gasPost('ping', {});
+  if(r && r.ok){
+    const linkHtml = r.spreadsheetUrl ? ` <a href="${r.spreadsheetUrl}" target="_blank" rel="noopener">開啟試算表</a>` : '';
+    document.getElementById('gas-msg').innerHTML = '✅ 連線成功，試算表已可使用（第一次連線會自動建立分頁）。'+linkHtml;
+    document.getElementById('gas-status-tag').textContent = '已設定（試算表為主）';
+    // 連線成功後，把目前系統裡的費率／接水費／服務費第一次推上去，並把案件與費率改成以試算表為準
+    await saveRatesConfig();
+    await reloadCases();
+  }else{
+    document.getElementById('gas-msg').textContent = '❌ 連線失敗：' + ((r&&r.error)||'請確認 URL 與部署權限（部署時「執行身分」需選「我」、「具有存取權的使用者」需選「任何人」）');
+  }
+}
+async function loadLocalCases(){
+  try{
+    const idx = await storageList('case:', true);
+    const keys = (idx && idx.keys) || [];
+    const results = await Promise.all(keys.map(k=>storageGet(k,true).catch(()=>null)));
+    return results.filter(Boolean).map(r=>{ try{return JSON.parse(r.value);}catch(e){return null;} }).filter(Boolean);
+  }catch(e){ return []; }
+}
+async function syncAllCasesToSheet(){
+  if(!GAS_URL){ alert('請先設定 Google Apps Script URL'); return; }
+  document.getElementById('gas-msg').textContent = '同步中…';
+  // 注意：這裡故意讀「本機快取」而不是先重新整理成雲端版本，
+  // 否則會把還沒同步成功、只存在本機的案件在推送前就先弄丟。
+  const local = await loadLocalCases();
+  const map = {};
+  [...local, ...CASES].forEach(c=>{ if(c && c.id) map[c.id]=c; });
+  const merged = Object.values(map);
+  if(!merged.length){ document.getElementById('gas-msg').textContent = '目前沒有任何本機案件可同步'; return; }
+  const r = await gasPost('bulkSaveCases', merged.map(caseToFlatRow));
+  document.getElementById('gas-msg').textContent = (r && r.ok) ? `✅ 已同步 ${merged.length} 筆案件到 Google 試算表` : '❌ 同步失敗：' + ((r&&r.error)||'未知錯誤');
+  if(r && r.ok){ await reloadCases(); }
+}
+function downloadGasScript(){
+  const code = `/**
+ * 用戶進水管新裝工程費 · 案件同步用 Google Apps Script（v2 · 全部資料集中在同一份試算表）
+ * ------------------------------------------------------------
+ * 這一版跟舊版最大的差別：
+ * 1. 產生的 Google 試算表，會自動移動到「跟這支 Apps Script 專案同一個 Google Drive 資料夾」，
+ *    不會再散落在「我的雲端硬碟」根目錄，方便找。
+ * 2. 除了案件紀錄（Cases 分頁），費率表（Rates）、接水費（Conn）、服務費等設定（Config）
+ *    也都存在同一份試算表的不同分頁，不再只有案件被同步、費率卻不同步的問題。
+ *
+ * 部署步驟：
+ * 1. 前往 https://script.google.com ，建立「新專案」。
+ *    → 建議：先在 Google Drive 建立一個資料夾（例如「進水管工程費系統」），
+ *      再從那個資料夾內用「新增」→「更多」→「Google Apps Script」建立專案，
+ *      這樣本程式碼產生的試算表就會自動跟腳本一起放在該資料夾。
+ *      （如果你是直接在 script.google.com 建立、不是從資料夾裡建立，腳本檔案預設就在雲端硬碟最上層，
+ *       試算表一樣會被移動到腳本檔案所在的位置，只是位置會是雲端硬碟最上層，而不是你自訂的資料夾。）
+ * 2. 把下面全部程式碼貼進去，取代預設內容，Ctrl+S 存檔。
+ * 3. 右上角「部署」→「新增部署作業」→ 類型選「網頁應用程式」。
+ *      - 說明：可留空
+ *      - 執行身分：我（你自己的帳號）← 一定要選這個，不要選「使用這個應用程式的使用者」，
+ *        否則其他同事用瀏覽器打開系統時會因為沒有授權而同步失敗。
+ *      - 具有存取權的使用者：任何人
+ *    按「部署」，第一次會要求「授權存取」，選你的 Google 帳號並允許。
+ * 4. 複製產生的「網頁應用程式 URL」（結尾是 /exec），貼回系統「費率管理」頁的
+ *    「Google Apps Script Web App URL」欄位並存檔。
+ * 5. 回到系統，按一下「測試連線」。第一次會自動建立試算表，檔名為 CONFIG.SHEET_NAME，
+ *    並且會出現在跟這支 Apps Script 專案同一個資料夾裡。
+ * 6. 之後系統存檔案件、調整費率，都會自動寫進這份試算表；
+ *    也可以直接在 Google 試算表上開樞紐分析表做更彈性的分析。
+ * 7. 之後如果程式碼有修改，記得「部署」→「管理部署作業」→ 編輯 → 版本選「新版本」→部署，
+ *    URL 通常維持不變，不需要重新貼到系統裡。
+ *
+ * 常見「同步了但看不到試算表」的原因：
+ * - 執行身分選成「使用這個應用程式的使用者」：一般使用者的瀏覽器是匿名呼叫，沒有身分，
+ *   Google 會直接擋掉，doPost/doGet 根本沒有真正執行到，當然不會建立檔案。
+ * - 部署後又建立了「新的部署作業」而不是「管理部署作業→新版本」：這樣 URL 會變，
+ *   系統裡貼的還是舊 URL，等於打到一個不存在的部署。
+ * - 試算表其實有建立成功，但建立在「部署者（你）」的 Google 帳號 Drive 裡，
+ *   而查看的人用的是別的帳號登入 Drive，所以自己的 Drive 找不到——這是正常的，
+ *   請直接請部署者本人的帳號檢查，或把該試算表共用給其他人。
+ *
+ * 備份與還原（萬一資料不見了怎麼辦）：
+ * - 最推薦、最不會出錯的備份方式：直接把整份試算表「檔案→建立副本」，
+ *   或善用 Google 試算表內建的「檔案→版本記錄→查看版本記錄」，
+ *   萬一 Cases 分頁被誤刪/誤改，可以直接把整份試算表復原到某個時間點，
+ *   不需要手動貼資料，也不會有欄位對不齊、JSON 被截斷這些風險。
+ * - 如果情況是要「手動把備份的案件資料貼回 Cases 分頁」（例如從別份試算表複製過來）：
+ *   可以，但務必注意：
+ *   (1) 一定要整列貼上，且欄位順序要跟第1列標題完全一致（目前順序是
+ *       id, unit, caseno, date, type, savedAt, newTotal, oldTotal, diff, diffPct,
+ *       meterCount, fullJson, project, address）——用「Ctrl+Shift+V 只貼上值」比較安全，
+ *       避免把公式或格式也貼進來。
+ *   (2) 系統實際讀取金額與明細只看 fullJson 這一欄（一整包 JSON 文字），
+ *       其他欄位（unit/caseno/date/type/project/address）只是方便人眼看、方便手動修正用的鏡像，
+ *       系統重新整理時反而會拿這幾欄的文字覆蓋 fullJson 裡對應的欄位（見系統端 loadFromCloudIfConfigured）。
+ *       所以復原時 fullJson 欄一定要完整、不能被截斷或改壞，才是資料有沒有救回來的關鍵。
+ *   (3) id 欄請保留原本的值，之後在系統裡對同一筆案件按「編輯／更新」才會覆蓋到正確的那一列，
+ *       而不是意外多存一筆重複的案件。
+ *   (4) 貼完之後回系統「③ 交叉分析」頁按「重新整理」，確認案件數與金額都正常再繼續使用。
+ *   (5) 系統裡「下載 Excel」匯出的檔案不含 fullJson，只有金額摘要，不能拿來做這種還原用途，
+ *       真正能還原的備份一定要是這份 Google 試算表本身（或其副本／版本記錄）。
+ * ------------------------------------------------------------
+ */
+
+const CONFIG = {
+  SHEET_NAME: '進水管工程費_新舊版系統資料',
+  TABS: {
+    CASES: 'Cases',
+    RATES: 'Rates',
+    CONN: 'Conn',
+    CONFIG: 'Config'
+  },
+  CASE_HEADERS: ['id','unit','caseno','date','type','savedAt','newTotal','oldTotal','diff','diffPct','meterCount','fullJson','project','address'],
+  RATE_HEADERS: ['version','material','kind','caliber','item','value','verified'],
+  CONN_HEADERS: ['caliber','value','verified'],
+  CONFIG_HEADERS: ['key','value']
+};
+
+/* ---------- 資料夾／試算表 ---------- */
+function getScriptFolder_(){
+  try{
+    const scriptFile = DriveApp.getFileById(ScriptApp.getScriptId());
+    const parents = scriptFile.getParents();
+    return parents.hasNext() ? parents.next() : DriveApp.getRootFolder();
+  }catch(e){
+    return DriveApp.getRootFolder();
+  }
+}
+
+function getOrCreateSpreadsheet_(){
+  const folder = getScriptFolder_();
+  const existing = folder.getFilesByName(CONFIG.SHEET_NAME);
+  let ss;
+  if(existing.hasNext()){
+    ss = SpreadsheetApp.open(existing.next());
+  } else {
+    // 有些舊部署可能已經在 Drive 根目錄建立過同名檔案，優先重複使用它，避免重複建立
+    const rootMatch = DriveApp.getFilesByName(CONFIG.SHEET_NAME);
+    if(rootMatch.hasNext()){
+      const file = rootMatch.next();
+      ss = SpreadsheetApp.open(file);
+      moveFileToFolder_(file, folder);
+    } else {
+      ss = SpreadsheetApp.create(CONFIG.SHEET_NAME);
+      moveFileToFolder_(DriveApp.getFileById(ss.getId()), folder);
+    }
+  }
+  ensureTabs_(ss);
+  return ss;
+}
+
+function moveFileToFolder_(file, folder){
+  try{
+    // 新版 Drive API：moveTo 較簡潔
+    file.moveTo(folder);
+  }catch(e){
+    // 舊版相容寫法
+    try{
+      folder.addFile(file);
+      const parents = file.getParents();
+      while(parents.hasNext()){
+        const p = parents.next();
+        if(p.getId() !== folder.getId()) p.removeFile(file);
+      }
+    }catch(e2){ /* 移動失敗就算了，至少檔案本身仍可正常使用 */ }
+  }
+}
+
+function ensureTabs_(ss){
+  ensureSheetWithHeaders_(ss, CONFIG.TABS.CASES, CONFIG.CASE_HEADERS);
+  ensureSheetWithHeaders_(ss, CONFIG.TABS.RATES, CONFIG.RATE_HEADERS);
+  ensureSheetWithHeaders_(ss, CONFIG.TABS.CONN, CONFIG.CONN_HEADERS);
+  ensureSheetWithHeaders_(ss, CONFIG.TABS.CONFIG, CONFIG.CONFIG_HEADERS);
+  // 拿掉試算表預設多出來的空白 Sheet1（如果還在而且是空的）
+  const defaultSheet = ss.getSheetByName('工作表1') || ss.getSheetByName('Sheet1');
+  if(defaultSheet && ss.getSheets().length > 1 && defaultSheet.getLastRow() === 0){
+    ss.deleteSheet(defaultSheet);
+  }
+}
+
+function ensureSheetWithHeaders_(ss, name, headers){
+  let sheet = ss.getSheetByName(name);
+  if(!sheet){ sheet = ss.insertSheet(name); }
+  if(sheet.getLastRow() === 0){
+    sheet.appendRow(headers);
+    sheet.setFrozenRows(1);
+  } else {
+    // 既有分頁：如果程式碼後來新增了欄位（例如新增了 project/address），
+    // 把缺少的表頭補到最後面，不會打亂舊資料原本的欄位順序、也不會動到既有資料
+    const existingHeaders = sheet.getRange(1,1,1, Math.max(sheet.getLastColumn(),1)).getValues()[0];
+    const existingCount = existingHeaders.filter(h=>h!=='').length;
+    if(existingCount < headers.length){
+      const missing = headers.slice(existingCount);
+      sheet.getRange(1, existingCount+1, 1, missing.length).setValues([missing]);
+    }
+  }
+  return sheet;
+}
+
+/* ---------- Cases ---------- */
+function upsertCaseRow_(sheet, row){
+  const data = sheet.getDataRange().getValues();
+  const idCol = CONFIG.CASE_HEADERS.indexOf('id');
+  let targetRow = -1;
+  for(let i=1;i<data.length;i++){
+    if(data[i][idCol] === row.id){ targetRow = i+1; break; }
+  }
+  const values = CONFIG.CASE_HEADERS.map(h => row[h] !== undefined ? row[h] : '');
+  if(targetRow > -1){
+    sheet.getRange(targetRow,1,1,values.length).setValues([values]);
+  } else {
+    sheet.appendRow(values);
+  }
+}
+
+/* ---------- Rates / Conn / Config：整批覆蓋寫入（系統端已經是完整清單，直接覆蓋最簡單也最不會出現殘留舊資料）---------- */
+function overwriteSheetRows_(sheet, headers, rows){
+  const lastRow = sheet.getLastRow();
+  if(lastRow > 1){
+    sheet.getRange(2,1,lastRow-1, headers.length).clearContent();
+  }
+  if(rows && rows.length){
+    const values = rows.map(r => headers.map(h => r[h] !== undefined ? r[h] : ''));
+    sheet.getRange(2,1,values.length, headers.length).setValues(values);
+  }
+}
+
+function readSheetAsObjects_(sheet, headers){
+  const data = sheet.getDataRange().getValues();
+  if(data.length < 2) return [];
+  return data.slice(1).filter(r => r.some(v=>v!=='' && v!==null)).map(r=>{
+    const obj = {};
+    headers.forEach((h,i)=> obj[h] = r[i]);
+    return obj;
+  });
+}
+
+/* ---------- HTTP handlers ---------- */
+function jsonOut_(obj){
+  return ContentService.createTextOutput(JSON.stringify(obj)).setMimeType(ContentService.MimeType.JSON);
+}
+
+function doPost(e){
+  try{
+    const body = JSON.parse(e.postData.contents);
+    const ss = getOrCreateSpreadsheet_();
+
+    if(body.action === 'ping'){
+      return jsonOut_({ok:true, msg:'pong', spreadsheetUrl: ss.getUrl()});
+    }
+
+    if(body.action === 'saveCase'){
+      upsertCaseRow_(ss.getSheetByName(CONFIG.TABS.CASES), body.payload);
+      return jsonOut_({ok:true});
+    }
+
+    if(body.action === 'bulkSaveCases'){
+      const sheet = ss.getSheetByName(CONFIG.TABS.CASES);
+      (body.payload||[]).forEach(row => upsertCaseRow_(sheet, row));
+      return jsonOut_({ok:true, count:(body.payload||[]).length});
+    }
+
+    if(body.action === 'saveAllRates'){
+      const p = body.payload || {};
+      overwriteSheetRows_(ss.getSheetByName(CONFIG.TABS.RATES), CONFIG.RATE_HEADERS, p.rates || []);
+      overwriteSheetRows_(ss.getSheetByName(CONFIG.TABS.CONN), CONFIG.CONN_HEADERS, p.conn || []);
+      const configRows = [
+        {key:'serviceFeeNew', value:(p.serviceFee&&p.serviceFee.new)||0},
+        {key:'serviceFeeOld', value:(p.serviceFee&&p.serviceFee.old)||0},
+        {key:'seedVersion', value:p.seedVersion||''}
+      ];
+      overwriteSheetRows_(ss.getSheetByName(CONFIG.TABS.CONFIG), CONFIG.CONFIG_HEADERS, configRows);
+      return jsonOut_({ok:true});
+    }
+
+    return jsonOut_({ok:false, error:'unknown action'});
+  }catch(err){
+    return jsonOut_({ok:false, error:String(err)});
+  }
+}
+
+function doGet(e){
+  try{
+    const ss = getOrCreateSpreadsheet_();
+    const rows = readSheetAsObjects_(ss.getSheetByName(CONFIG.TABS.CASES), CONFIG.CASE_HEADERS);
+    const rates = readSheetAsObjects_(ss.getSheetByName(CONFIG.TABS.RATES), CONFIG.RATE_HEADERS);
+    const conn = readSheetAsObjects_(ss.getSheetByName(CONFIG.TABS.CONN), CONFIG.CONN_HEADERS);
+    const configRows = readSheetAsObjects_(ss.getSheetByName(CONFIG.TABS.CONFIG), CONFIG.CONFIG_HEADERS);
+    const configMap = {};
+    configRows.forEach(r => configMap[r.key] = r.value);
+    return jsonOut_({
+      ok:true,
+      rows,
+      rates,
+      conn,
+      config: {
+        serviceFeeNew: configMap.serviceFeeNew !== undefined ? +configMap.serviceFeeNew : undefined,
+        serviceFeeOld: configMap.serviceFeeOld !== undefined ? +configMap.serviceFeeOld : undefined,
+        seedVersion: configMap.seedVersion || ''
+      },
+      spreadsheetUrl: ss.getUrl()
+    });
+  }catch(err){
+    return jsonOut_({ok:false, error:String(err)});
+  }
+}
+`;
+  const blob = new Blob([code], {type:'text/plain;charset=utf-8;'});
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob); a.download = 'Code.gs.txt'; a.click();
+  alert('已下載 Code.gs.txt（v2 全部資料集中版），內含完整部署步驟說明與常見問題排解（寫在檔案最上方註解）。請依照步驟在 script.google.com 建立專案並重新部署。');
+}
+
+/* ============================================================
+   Tabs & Init
+   ============================================================ */
+document.querySelectorAll('nav.tabs button').forEach(btn=>{
+  btn.addEventListener('click', ()=>{
+    document.querySelectorAll('nav.tabs button').forEach(b=>b.classList.remove('active'));
+    document.querySelectorAll('.panel').forEach(p=>p.classList.remove('active'));
+    btn.classList.add('active');
+    document.getElementById('panel-'+btn.dataset.tab).classList.add('active');
+    if(btn.dataset.tab==='analysis') reloadCases();
+  });
+});
+
+async function init(){
+  document.getElementById('f-date').valueAsDate = new Date();
+  await loadGasUrl();          // 先知道有沒有設定 Google 試算表
+  await loadOrSeedRates();     // 本機共用快取／內建種子費率先墊底，確保一定看得到資料
+  const usedCloud = await loadFromCloudIfConfigured(); // 若已設定，改用 Google 試算表覆蓋（試算表為正式來源）
+  renderRateTable(); renderConnTable(); renderSeedNotice();
+  document.getElementById('svc-new').value = SERVICE_FEE.new;
+  document.getElementById('svc-old').value = SERVICE_FEE.old;
+  addRow('main'); addRow('indep'); addRow('sub');
+  document.getElementById('status-left').textContent = '就緒（費率 '+RATES.length+' 筆 · 接水費 '+CONN.length+' 筆）';
+  document.getElementById('status-right').textContent = usedCloud ? '資料來源：Google 試算表（單位共用）' : (GAS_URL ? '⚠ 已設定試算表但讀取失敗，暫用本機共用快取' : '尚未設定 Google 試算表，資料存在本機共用雲端快取');
+}
+init();
+</script>
+</body>
+</html>
