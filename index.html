@@ -190,8 +190,8 @@
   </div>
 
   <div id="edit-mode-banner" style="display:none;" class="notice warn">
-    ✏️ 正在編輯已存檔案件 <b id="edit-mode-caseno"></b>，按「存檔到雲端」會直接覆蓋這筆案件（不會另外新增一筆）。
-    <button class="btn ghost" style="padding:3px 10px;font-size:12px;margin-left:8px;" onclick="exitEditMode()">取消編輯，改成新增新案件</button>
+    ✏️ 正在編輯已存檔案件 <b id="edit-mode-caseno"></b>，按「更新這筆案件」會直接覆蓋這筆、不會另外新增；不管按幾次都一樣安全，可以放心多按確認。
+    <button class="btn ghost" style="padding:3px 10px;font-size:12px;margin-left:8px;" onclick="exitEditMode()">完成了，改成新增新案件</button>
   </div>
   <div class="row-actions">
     <button class="btn" onclick="calculate()">試算新版／舊版金額</button>
@@ -679,35 +679,52 @@ function breakdownHtml(label, r){
 function genId(){ return 'c'+Date.now()+Math.random().toString(36).slice(2,7); }
 
 async function saveCase(){
-  const res = calculate();
-  const unit = document.getElementById('f-unit').value.trim();
-  const caseno = document.getElementById('f-caseno').value.trim();
-  const date = document.getElementById('f-date').value || new Date().toISOString().slice(0,10);
-  const type = document.getElementById('f-type').value;
-  const project = document.getElementById('f-project').value.trim();
-  const address = document.getElementById('f-address').value.trim();
-  if(!unit){ alert('請填寫單位名稱'); return; }
-  const isEdit = !!editingCaseId;
-  const id = editingCaseId || genId();
-  const record = { id, unit, caseno, date, type, project, address, groups: JSON.parse(JSON.stringify(state)),
-                    result: { new: summarize(res.new), old: summarize(res.old) }, savedAt: new Date().toISOString() };
-  let localOk = true;
+  if(window.__savingCase) return; // 防止連點造成重複送出
+  window.__savingCase = true;
+  const btn = document.getElementById('save-btn');
+  const prevBtnText = btn ? btn.textContent : '';
+  if(btn){ btn.disabled = true; btn.textContent = '處理中…'; }
+  document.getElementById('save-msg').textContent = '存檔中，請稍候…';
   try{
-    await storageSet('case:'+id, JSON.stringify(record), true);
-  }catch(e){
-    localOk = false; // 本機快取失敗不中止流程，雲端試算表才是真正重要的地方
+    const res = calculate();
+    const unit = document.getElementById('f-unit').value.trim();
+    const caseno = document.getElementById('f-caseno').value.trim();
+    const date = document.getElementById('f-date').value || new Date().toISOString().slice(0,10);
+    const type = document.getElementById('f-type').value;
+    const project = document.getElementById('f-project').value.trim();
+    const address = document.getElementById('f-address').value.trim();
+    if(!unit){ alert('請填寫單位名稱'); return; }
+    const isEdit = !!editingCaseId;
+    const id = editingCaseId || genId();
+    const record = { id, unit, caseno, date, type, project, address, groups: JSON.parse(JSON.stringify(state)),
+                      result: { new: summarize(res.new), old: summarize(res.old) }, savedAt: new Date().toISOString() };
+    let localOk = true;
+    try{
+      await storageSet('case:'+id, JSON.stringify(record), true);
+    }catch(e){
+      localOk = false; // 本機快取失敗不中止流程，雲端試算表才是真正重要的地方
+    }
+    const idx = CASES.findIndex(c=>c.id===id);
+    if(idx>-1) CASES[idx] = record; else CASES.push(record);
+    let msg = localOk ? `已${isEdit?'更新':'存檔'}（案號 ${caseno||id}）` : `已計算（案號 ${caseno||id}，本機瀏覽器快取寫入失敗，不影響下面的雲端同步）`;
+    let cloudOk = !GAS_URL; // 沒設定雲端的話視為「不需要雲端也算完成」
+    if(GAS_URL){
+      const r = await gasPost('saveCase', caseToFlatRow(record));
+      cloudOk = !!(r && r.ok);
+      msg += cloudOk ? '，已同步至 Google 試算表' : `，同步 Google 試算表失敗：${(r&&r.error)||'未知錯誤'}（此案件仍在編輯模式，請直接再按一次「${isEdit?'更新這筆案件':'存檔到雲端'}」重試，不會另外新增一筆）`;
+    } else if(!localOk){
+      msg += '；且尚未設定 Google 試算表，此筆案件目前只留在畫面上，重新整理頁面就會不見，請盡快到「費率管理」頁設定試算表網址。';
+    }
+    document.getElementById('save-msg').textContent = msg;
+    // 重點修正：存檔／更新後「不會」自動退出編輯模式。
+    // 這樣同一筆案件不管按幾次「更新這筆案件」都是覆蓋同一筆，不會因為連點或網路慢而多存出重複案件。
+    // 如果是新增（非編輯）且雲端同步成功，才自動切換成編輯模式繼續停留在這筆，避免使用者沒發現已經存過、又按一次新增出重複案件。
+    if(!isEdit && cloudOk){ enterEditMode(id, caseno); }
+    if(GAS_URL && cloudOk){ reloadCases().catch(()=>{}); } // 背景更新分析頁清單，不擋UI
+  } finally {
+    window.__savingCase = false;
+    if(btn){ btn.disabled = false; btn.textContent = editingCaseId ? '更新這筆案件' : '存檔到雲端'; }
   }
-  const idx = CASES.findIndex(c=>c.id===id);
-  if(idx>-1) CASES[idx] = record; else CASES.push(record);
-  let msg = localOk ? `已${isEdit?'更新':'存檔'}（案號 ${caseno||id}）` : `已計算（案號 ${caseno||id}，本機瀏覽器快取寫入失敗，不影響下面的雲端同步）`;
-  if(GAS_URL){
-    const r = await gasPost('saveCase', caseToFlatRow(record));
-    msg += (r && r.ok) ? '，已同步至 Google 試算表' : `，同步 Google 試算表失敗：${(r&&r.error)||'未知錯誤'}（可稍後在費率管理頁按「立即同步全部案件到 Sheet」重試）`;
-  } else if(!localOk){
-    msg += '；且尚未設定 Google 試算表，此筆案件目前只留在畫面上，重新整理頁面就會不見，請盡快到「費率管理」頁設定試算表網址。';
-  }
-  document.getElementById('save-msg').textContent = msg;
-  if(isEdit) clearEditFlag_();
 }
 let editingCaseId = null;
 function clearEditFlag_(){
@@ -825,7 +842,10 @@ function renderFlatTable(cases){
       <td class="num nums">${fmt(co)}</td>
       <td class="num nums"><span class="pill ${cd>=0?'up':'down'}">${cd>=0?'+':''}${fmt(cd)}</span></td>
       <td class="num nums">${pct.toFixed(1)}%</td>
-      <td class="num"><button class="btn ghost" style="padding:3px 9px;font-size:11px;" onclick="showCaseDetail('${c.id}')">明細</button></td>
+      <td class="num" style="white-space:nowrap;">
+        <button class="btn ghost" style="padding:3px 9px;font-size:11px;" onclick="showCaseDetail('${c.id}')">明細</button>
+        <button class="btn ghost" id="del-btn-${c.id}" style="padding:3px 9px;font-size:11px;color:var(--down);margin-left:4px;" onclick="deleteCase('${c.id}')">刪除</button>
+      </td>
     </tr>`;
   }).join('') || `<tr><td colspan="12" style="text-align:center;color:var(--ink-soft);padding:20px;">目前沒有符合條件的案件</td></tr>`;
 }
@@ -1123,6 +1143,33 @@ async function gasPostCase(record){
   const r = await gasPost('saveCase', caseToFlatRow(record));
   return !!(r && r.ok);
 }
+async function deleteCase(id){
+  const c = CASES.find(x=>x.id===id);
+  if(!c) return;
+  const label = c.caseno || c.project || id;
+  if(!confirm(`確定要刪除案件「${label}」嗎？這個動作無法復原（雲端試算表裡的那一列也會被移除）。`)) return;
+  const btn = document.getElementById('del-btn-'+id);
+  if(btn){ btn.disabled = true; btn.textContent = '刪除中…'; }
+  try{
+    if(GAS_URL){
+      const r = await gasPost('deleteCase', {id});
+      if(!r || !r.ok){
+        alert('刪除失敗：' + ((r&&r.error)||'未知錯誤') + '（雲端試算表那一列還在，本機也不會刪除，請確認網路或稍後再試）');
+        if(btn){ btn.disabled = false; btn.textContent = '刪除'; }
+        return;
+      }
+    }
+    try{ await storageDelete('case:'+id, true); }catch(e){ /* 本機快取刪不掉就算了，不影響雲端已經刪除的結果 */ }
+    CASES = CASES.filter(x=>x.id!==id);
+    if(editingCaseId === id){ clearEditFlag_(); resetForm(); }
+    renderAnalysis();
+    document.getElementById('gas-msg') && (document.getElementById('gas-msg').textContent = '');
+  } finally {
+    // 按鈕所在的列通常已經被移除了，這裡防呆一下避免報錯
+    const stillThere = document.getElementById('del-btn-'+id);
+    if(stillThere){ stillThere.disabled = false; stillThere.textContent = '刪除'; }
+  }
+}
 async function gasFetchAll(){
   if(!GAS_URL) return null;
   try{
@@ -1205,8 +1252,14 @@ async function syncAllCasesToSheet(){
 }
 function downloadGasScript(){
   const code = `/**
- * 用戶進水管新裝工程費 · 案件同步用 Google Apps Script（v2 · 全部資料集中在同一份試算表）
+ * 用戶進水管新裝工程費 · 案件同步用 Google Apps Script（v3 · 加入刪除案件、加速讀寫）
  * ------------------------------------------------------------
+ * 這一版新增：
+ * A. deleteCase：可以在系統裡直接刪除某一筆案件，雲端試算表會同步移除那一列。
+ * B. 加了 PropertiesService 快取試算表ID，減少每次同步都要重新搜尋 Drive 資料夾的時間，
+ *    存檔／讀取應該會明顯變快；如果之前用過舊版部署過同一支腳本，直接覆蓋貼上、
+ *    「管理部署作業→新版本」重新部署即可，不需要重新設定資料夾或URL。
+ *
  * 這一版跟舊版最大的差別：
  * 1. 產生的 Google 試算表，會自動移動到「跟這支 Apps Script 專案同一個 Google Drive 資料夾」，
  *    不會再散落在「我的雲端硬碟」根目錄，方便找。
@@ -1294,6 +1347,19 @@ function getScriptFolder_(){
 }
 
 function getOrCreateSpreadsheet_(){
+  // 效能優化：把找到的試算表ID快取進 PropertiesService，之後每次呼叫先試快取，
+  // 省掉每次都要重新掃 Drive 資料夾找檔案的時間（這是同步變慢的主因之一）。
+  const props = PropertiesService.getScriptProperties();
+  const cachedId = props.getProperty('SPREADSHEET_ID');
+  if(cachedId){
+    try{
+      const ss = SpreadsheetApp.openById(cachedId);
+      ensureTabs_(ss);
+      return ss;
+    }catch(e){
+      // 快取的ID失效了（檔案被手動刪除或移動導致存取失敗），往下走原本的搜尋流程重新找一次
+    }
+  }
   const folder = getScriptFolder_();
   const existing = folder.getFilesByName(CONFIG.SHEET_NAME);
   let ss;
@@ -1312,6 +1378,7 @@ function getOrCreateSpreadsheet_(){
     }
   }
   ensureTabs_(ss);
+  props.setProperty('SPREADSHEET_ID', ss.getId());
   return ss;
 }
 
@@ -1379,6 +1446,15 @@ function upsertCaseRow_(sheet, row){
   }
 }
 
+function deleteCaseRow_(sheet, id){
+  const data = sheet.getDataRange().getValues();
+  const idCol = CONFIG.CASE_HEADERS.indexOf('id');
+  for(let i=1;i<data.length;i++){
+    if(data[i][idCol] === id){ sheet.deleteRow(i+1); return true; }
+  }
+  return false;
+}
+
 /* ---------- Rates / Conn / Config：整批覆蓋寫入（系統端已經是完整清單，直接覆蓋最簡單也最不會出現殘留舊資料）---------- */
 function overwriteSheetRows_(sheet, headers, rows){
   const lastRow = sheet.getLastRow();
@@ -1418,6 +1494,11 @@ function doPost(e){
     if(body.action === 'saveCase'){
       upsertCaseRow_(ss.getSheetByName(CONFIG.TABS.CASES), body.payload);
       return jsonOut_({ok:true});
+    }
+
+    if(body.action === 'deleteCase'){
+      const ok = deleteCaseRow_(ss.getSheetByName(CONFIG.TABS.CASES), body.payload.id);
+      return jsonOut_({ok:true, deleted: ok});
     }
 
     if(body.action === 'bulkSaveCases'){
