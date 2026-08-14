@@ -1018,7 +1018,7 @@ function showCaseDetail(id){
   state.main=c.groups.main; state.indep=c.groups.indep; state.sub=c.groups.sub;
   renderRows('main'); renderRows('indep'); renderRows('sub');
   enterEditMode(c.id, c.caseno);
-  win.innerHTML = `<div class="notice info">已載入案件 ${c.caseno||id} 的內容到上面的表單，可直接修改任一欄位後按「更新這筆案件」即時修正（會覆蓋，不會另外新增）。</div>` +
+  win.innerHTML = `<div class="notice info">已載入案件 ${c.caseno||id} 的內容到上面的表單，修改欄位後先按「試算新版/舊版金額」計算後，再按「更新這筆案件」即時修正（會覆蓋，不會另外新增）。</div>` +
     `<div class="compare-wrap">
       <div class="ver-card new"><div class="label">新版總金額</div><div class="total nums">$ ${fmt(c.result.new.grandTotal)}</div></div>
       <div class="ver-card old"><div class="label">舊版總金額</div><div class="total nums">$ ${fmt(c.result.old.grandTotal)}</div></div>
