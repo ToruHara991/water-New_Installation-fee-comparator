@@ -186,8 +186,8 @@
   <div class="card">
     <h3>常用範本 <span class="tag">選用</span></h3>
     <p style="color:var(--ink-soft);font-size:12px;margin:0 0 10px;">
-      範本只存「總表／獨立表／分表」的規格內容（口徑、管材、表位、止水栓、費用開關、總表算法），
-      不含單位名稱、案號、建案名稱、地址——套用範本不會動到您已經填好的這幾項。
+      範本只存「總表／獨立表／分表」的規格內容（口徑、管材、表位、止水栓、費用開關、總表算法）。
+      套用範本時，會清空單位名稱／案號／建案名稱／地址，並把日期重設為今天，避免殘留剛才讀取的其他案件資料；如果原本正在編輯某筆已存檔案件，套用範本也會自動離開編輯模式，改成準備新增一筆全新案件，不會誤蓋掉原本那筆。
     </p>
     <div class="filters" style="margin-bottom:6px;">
       <div class="field" style="min-width:260px;flex:1 1 260px;"><label>選擇範本</label>
@@ -195,6 +195,7 @@
       </div>
       <div class="field" style="align-self:flex-end;"><button class="btn secondary" onclick="applyTemplate()">套用這個範本</button></div>
       <div class="field" style="align-self:flex-end;"><button class="btn ghost" onclick="updateSelectedTemplate()">用目前規格更新此範本</button></div>
+      <div class="field" style="align-self:flex-end;"><button class="btn ghost" onclick="renameSelectedTemplate()">重新命名此範本</button></div>
       <div class="field" style="align-self:flex-end;"><button class="btn ghost" onclick="deleteSelectedTemplate()" style="color:var(--down);">刪除此範本</button></div>
       <div class="field" style="align-self:flex-end;"><button class="btn" onclick="saveTemplateAsNew()">將目前規格另存為新範本</button></div>
     </div>
@@ -1327,15 +1328,36 @@ function applyTemplate(){
   if(!id) return;
   const tmpl = TEMPLATES.find(t=>t.id===id);
   if(!tmpl) return;
-  if(!currentSpecsEmpty()){
-    if(!confirm(`套用範本「${tmpl.name}」會覆蓋目前畫面上已經填的總表／獨立表／分表規格（單位名稱、案號、建案名稱、住址不會被動到）。確定要套用嗎？`)) return;
+  const hasSpecs = !currentSpecsEmpty();
+  const hasBasicInfo = ['f-unit','f-caseno','f-project','f-address'].some(fid=>document.getElementById(fid).value.trim()!=='');
+  if(hasSpecs || hasBasicInfo){
+    if(!confirm(`套用範本「${tmpl.name}」會：\n1. 覆蓋目前畫面上的總表／獨立表／分表規格\n2. 清空「基本資料」欄位（單位名稱、案號、建案名稱、地址），並把日期重設為今天，避免殘留剛才讀取的舊案件資料\n\n確定要套用嗎？`)) return;
   }
   state.main = JSON.parse(JSON.stringify(tmpl.groups.main||[]));
   state.indep = JSON.parse(JSON.stringify(tmpl.groups.indep||[]));
   state.sub = JSON.parse(JSON.stringify(tmpl.groups.sub||[]));
   renderRows('main'); renderRows('indep'); renderRows('sub');
+  // 清空基本資料，避免前一次讀取（或編輯）的案件資訊殘留在表單上
+  document.getElementById('f-unit').value = '';
+  document.getElementById('f-caseno').value = '';
+  document.getElementById('f-project').value = '';
+  document.getElementById('f-address').value = '';
+  document.getElementById('f-date').valueAsDate = new Date();
+  if(tmpl.type){ document.getElementById('f-type').value = tmpl.type; }
+  document.getElementById('result-area').innerHTML = '';
+  clearEditFlag_(); // 套用範本＝開始一筆新案件，離開任何原本正在編輯中的舊案件，避免存檔時誤蓋掉它
   editingTemplateId = id;
-  document.getElementById('tmpl-msg').textContent = `已套用範本「${tmpl.name}」`;
+  document.getElementById('tmpl-msg').textContent = `已套用範本「${tmpl.name}」，基本資料已清空，可直接填單位/案號等資訊後試算存檔。`;
+}
+async function renameSelectedTemplate(){
+  const id = document.getElementById('tmpl-select').value;
+  if(!id){ alert('請先在上面選一個要重新命名的範本'); return; }
+  const old = TEMPLATES.find(t=>t.id===id);
+  if(!old) return;
+  const name = prompt('幫這個範本重新命名：', old.name);
+  if(!name || !name.trim() || name.trim()===old.name) return;
+  const tmpl = { id, name: name.trim(), type: old.type||'', savedAt: new Date().toISOString(), groups: old.groups };
+  await persistTemplate_(tmpl, `已將範本改名為「${name.trim()}」`);
 }
 
 async function deleteSelectedTemplate(){
