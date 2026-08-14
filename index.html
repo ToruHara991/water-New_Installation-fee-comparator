@@ -96,8 +96,13 @@
   details.breakdown>summary::-webkit-details-marker{display:none;}
   details.breakdown>summary::before{content:"▸ ";}
   details.breakdown[open]>summary::before{content:"▾ ";}
-  .bk-table th,.bk-table td{padding:6px 10px;border-bottom:1px solid var(--line);text-align:right;font-size:12.5px;}
+  .bk-table-scroll{overflow-x:auto;}
+  .bk-table{min-width:980px;}
+  .bk-table th,.bk-table td{padding:6px 8px;border-bottom:1px solid var(--line);text-align:right;font-size:12px;white-space:nowrap;}
   .bk-table th:first-child,.bk-table td:first-child{text-align:left;}
+  .bk-table th:nth-child(1),.bk-table td:nth-child(1){min-width:120px;}
+  .bk-table th:nth-child(3),.bk-table td:nth-child(3){min-width:52px;}
+  .bk-table th:nth-child(5),.bk-table td:nth-child(5){min-width:60px;}
   .bk-table thead th{background:#fff;color:var(--ink-soft);font-weight:600;font-size:11px;}
   .bk-table tfoot td{font-weight:700;background:var(--surface-2);}
   .bk-table td.cell-stack{white-space:nowrap;cursor:help;}
@@ -108,6 +113,7 @@
   .bk-table td.cell-stack.off{background:#FBF4EC;}
   .bk-table td.cell-stack.off .zero{color:var(--amber);font-style:italic;}
   .bk-table td.cell-stack.na{background:#F3F5F6;}
+  .len-badge{display:inline-block;font-size:9px;background:var(--amber-soft);color:var(--amber);border-radius:4px;padding:0 4px;margin-left:4px;font-weight:700;cursor:help;vertical-align:middle;}
   .incl-toggle{display:inline-block;vertical-align:middle;margin-right:4px;cursor:pointer;}
   .incl-toggle input{width:12px;height:12px;vertical-align:middle;cursor:pointer;accent-color:var(--teal);}
   .incl-toggle input:disabled{cursor:not-allowed;}
@@ -708,7 +714,7 @@ function breakdownHtml(label, r, version){
       <td>${l.material}</td>
       <td>${l.caliber}mm</td>
       <td>${l.count}</td>
-      <td>${l.length}${l.calcMethod==='totalLength'?' <span class="badge warn" style="font-size:9px;">總長算法</span>':''}</td>
+      <td>${l.length}${l.calcMethod==='totalLength'?' <span class="len-badge" title="總表選了「總長度×每加1M」算法，不計基本4米">總長</span>':''}</td>
       ${cols}
       <td class="nums" style="font-weight:700;">${fmt(l.lineTotal)}</td>
       <td>${l.anyUnverified?'<span class="badge warn">需補充</span>':'<span class="badge ok">已核對</span>'}</td>
@@ -716,11 +722,13 @@ function breakdownHtml(label, r, version){
   return `
   <details class="breakdown" open>
     <summary>${label}明細（管線費 $${fmt(r.pipeTotal)} ＋ 接水費 $${fmt(r.connTotal)} ＋ 裝表費 $${fmt(r.installTotal)} ＋ 服務費 $${fmt(r.serviceTotal)}（${r.totalMeterCount} 顆表）＝ $${fmt(r.grandTotal)}）</summary>
-    <p style="color:var(--ink-soft);font-size:11px;margin:2px 0 8px;">每格顯示「單價×數量」，滑鼠移到格子上可看小計；勾選框可直接開關這項費用要不要計算，勾一下馬上重算。</p>
+    <p style="color:var(--ink-soft);font-size:11px;margin:2px 14px 8px;">每格顯示「單價×數量」，滑鼠移到格子上可看小計；勾選框可直接開關這項費用要不要計算，勾一下馬上重算。表格較寬，可左右滑動查看。</p>
+    <div class="bk-table-scroll">
     <table class="bk-table">
       <thead><tr><th>表別</th><th>管材</th><th>口徑</th><th>顆數</th><th>長度</th><th>接水處</th><th>水表組</th><th>基本4M</th><th>每加1M</th><th>接水費</th><th>裝表費</th><th>服務費</th><th>小計</th><th>狀態</th></tr></thead>
       <tbody>${rows || '<tr><td colspan="14" style="text-align:center;color:var(--ink-soft)">尚無資料</td></tr>'}</tbody>
     </table>
+    </div>
   </details>`;
 }
 
