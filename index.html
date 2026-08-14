@@ -105,6 +105,12 @@
   .bk-table td.cell-stack .mult{font-family:var(--mono);font-weight:600;color:var(--amber);margin-left:3px;}
   .bk-table td.cell-stack .na{color:var(--ink-soft);font-weight:400;font-style:italic;font-size:11.5px;}
   .bk-table td.cell-stack .zero{color:#C3CBCD;font-family:var(--mono);}
+  .bk-table td.cell-stack.off{background:#FBF4EC;}
+  .bk-table td.cell-stack.off .zero{color:var(--amber);font-style:italic;}
+  .bk-table td.cell-stack.na{background:#F3F5F6;}
+  .incl-toggle{display:inline-block;vertical-align:middle;margin-right:4px;cursor:pointer;}
+  .incl-toggle input{width:12px;height:12px;vertical-align:middle;cursor:pointer;accent-color:var(--teal);}
+  .incl-toggle input:disabled{cursor:not-allowed;}
 
   table.rate-table th,table.rate-table td{padding:6px 8px;border-bottom:1px solid var(--line);font-size:12px;text-align:left;}
   table.rate-table th{color:var(--ink-soft);font-weight:600;font-size:11px;position:sticky;top:0;background:#fff;}
@@ -407,7 +413,31 @@ const MATERIALS = ['SSP','DIP','PEP','PVCP','HDPEP','HIWP'];
 const MATERIAL_LABEL = {SSP:'不鏽鋼波狀管(SSP)',DIP:'延性石墨鑄鐵管(DIP)',PEP:'聚乙烯管(PEP)',PVCP:'硬質聚氯乙烯管(PVCP)',HDPEP:'高密度聚乙烯管(HDPEP)',HIWP:'耐衝擊硬質聚氯乙烯管(HIWP)'};
 const ITEMS = ['接水處','水表組_平面','水表組_立式','基本4公尺工料費','每增加1公尺工料費','裝表費_自備','裝表費_供料'];
 const POSITION_MAX_CALIBER = 50; // 超過此口徑不分平面/立式
-const TABLE_TYPES = {main:'總表', indep:'獨立表/公共表', sub:'分表'};
+const TABLE_TYPES = {main:'總表', indep:'公共表/獨立表/臨時表', sub:'分表'};
+
+/* ============================================================
+   每一項費用的「預設」保留(true)／刪除(false)
+   ------------------------------------------------------------
+   實務上常有「只做總表」「只做分表」「用戶自己處理某個項目」等混搭情況，
+   所以每一組表規格的每一項費用，使用者都可以在下方【試算結果】表格裡
+   用打勾直接開關（勾了才計算，勾一下就馬上重算）。
+   這裡只是「新增一組規格時」的預設勾選狀態，要調整某個情境的預設值，
+   直接改下面 true/false 即可，不用動計算邏輯。
+   ============================================================ */
+const DEFAULT_INCLUDE = {
+  main: { // 總表：不分新舊版，接水費預設不收；基本4M/每加1M 的算法另由 calcMethod 決定
+    new: {接水處:true,  水表組:true,  基本4M:true, 每加1M:true, 接水費:false, 裝表費:true,  服務費:true},
+    old: {接水處:true,  水表組:true,  基本4M:true, 每加1M:true, 接水費:false, 裝表費:false, 服務費:true}
+  },
+  indep: { // 公共表/獨立表/臨時表：五項都算，裝表費只有新版
+    new: {接水處:true,  水表組:true,  基本4M:true, 每加1M:true, 接水費:true,  裝表費:true,  服務費:true},
+    old: {接水處:true,  水表組:true,  基本4M:true, 每加1M:true, 接水費:true,  裝表費:false, 服務費:true}
+  },
+  sub: { // 分表：新版只收服務費+接水費+裝表費；舊版預設改為連水表組也一起算
+    new: {接水處:false, 水表組:false, 基本4M:false,每加1M:false,接水費:true,  裝表費:true,  服務費:true},
+    old: {接水處:true,  水表組:true,  基本4M:true, 每加1M:true, 接水費:true,  裝表費:false, 服務費:true}
+  }
+};
 const SEED_VERSION = '2026-08-11d'; // 內建費率版本號：每次我更新 seedRates()/seedConn() 就改這個字串（本次修正：裝表費80mm以上欄位錯位）
 let seedOutdated = false; // 雲端已存的費率版本 與 目前程式碼內建版本 不一致時設為 true
 
@@ -489,13 +519,16 @@ function lookupConn(caliber){
 /* ============================================================
    INPUT TAB — dynamic row builder
    ============================================================ */
-function blankSpec(){
+function blankSpec(group){
   rowCounter++;
+  const d = DEFAULT_INCLUDE[group];
   return { id:'r'+rowCounter, caliber:20, count:1, length:4,
-           materialNew:'SSP', materialOld:'PVCP', position:'平面', stopcock:'自備' };
+           materialNew:'SSP', materialOld:'PVCP', position:'平面', stopcock:'自備',
+           calcMethod:'base4m', // 只有總表(main)用到：'base4m'=基本4米+超出*每加1M（預設）／'totalLength'=總長度*每加1M
+           include: { new:{...d.new}, old:{...d.old} } };
 }
 function addRow(group){
-  state[group].push(blankSpec());
+  state[group].push(blankSpec(group));
   renderRows(group);
 }
 function removeRow(group, id){
@@ -511,23 +544,27 @@ function matOptions(sel){
 function renderRows(group){
   const el = document.getElementById('rows-'+group);
   if(state[group].length===0){ el.innerHTML = `<p style="color:var(--ink-soft);font-size:12.5px;">尚未新增規格，請點下方按鈕新增一組。</p>`; return; }
-  const isNewSub = (group==='sub');
+  const isMain = (group==='main');
+  const isSub = (group==='sub');
   el.innerHTML = state[group].map(spec=>{
     const showPos = spec.caliber <= POSITION_MAX_CALIBER;
     return `
     <div class="group-row" data-id="${spec.id}">
       <button class="rm" title="刪除這組" onclick="removeRow('${group}','${spec.id}')">✕</button>
-      ${isNewSub ? `<div class="notice info" style="margin:0 0 10px;">分表在新版只計算【服務費】＋【接水費】＋【裝表費】，不計算水表組與工料費（規則見新舊比較表備註 3、4）。</div>` : ''}
+      ${isSub ? `<div class="notice info" style="margin:0 0 10px;">分表預設：新版只收服務費＋接水費＋裝表費，舊版五項都收。若這組情況不同，試算後可到下方結果表格逐項打勾調整。</div>` : ''}
       <div class="grid">
         <div class="field"><label>口徑</label><select onchange="updSpec('${group}','${spec.id}','caliber',this.value)">${calibOptions(spec.caliber)}</select></div>
         <div class="field"><label>顆數</label><input type="number" min="0" value="${spec.count}" onchange="updSpec('${group}','${spec.id}','count',this.value)"></div>
-        <div class="field"><label>管線總長度（公尺，基本內含4米）</label><input type="number" min="0" value="${spec.length}" onchange="updSpec('${group}','${spec.id}','length',this.value)" ${isNewSub?'disabled title="新版分表不計工料費，長度僅供舊版使用"':''}></div>
+        <div class="field"><label>管線總長度（公尺，基本內含4米）</label><input type="number" min="0" value="${spec.length}" onchange="updSpec('${group}','${spec.id}','length',this.value)"></div>
         <div class="field"><label>新版管材</label><select onchange="updSpec('${group}','${spec.id}','materialNew',this.value)">${matOptions(spec.materialNew)}</select></div>
         <div class="field"><label>舊版管材</label><select onchange="updSpec('${group}','${spec.id}','materialOld',this.value)">${matOptions(spec.materialOld)}</select></div>
         ${showPos ? `<div class="field"><label>表位</label><select onchange="updSpec('${group}','${spec.id}','position',this.value)">
             <option ${spec.position==='平面'?'selected':''}>平面</option><option ${spec.position==='立式'?'selected':''}>立式</option></select></div>` : ''}
         <div class="field"><label>伸縮止水栓（影響新版裝表費）</label><select onchange="updSpec('${group}','${spec.id}','stopcock',this.value)">
             <option value="自備" ${spec.stopcock==='自備'?'selected':''}>用戶自備</option><option value="供料" ${spec.stopcock==='供料'?'selected':''}>本公司供料</option></select></div>
+        ${isMain ? `<div class="field"><label>總表管線費算法</label><select onchange="updSpec('${group}','${spec.id}','calcMethod',this.value)">
+            <option value="base4m" ${spec.calcMethod==='base4m'?'selected':''}>基本4米＋超出×每加1M（預設）</option>
+            <option value="totalLength" ${spec.calcMethod==='totalLength'?'selected':''}>總長度×每加1M（不計基本4米）</option></select></div>` : ''}
       </div>
     </div>`;
   }).join('');
@@ -545,45 +582,58 @@ function updSpec(group,id,field,value){
 function calcForVersion(version){
   const material = (spec)=> version==='new'? spec.materialNew : spec.materialOld;
   const lines = [];
-  let totalMeterCount = 0;
 
   ['main','indep','sub'].forEach(group=>{
     state[group].forEach(spec=>{
       const count = spec.count||0;
       if(count<=0) return;
-      totalMeterCount += count;
       const mat = material(spec);
       const excess = Math.max((spec.length||0) - 4, 0);
-      // 新版-分表：只計【服務費】+【接水費】+【裝表費】，不計水表組/工料費（新舊比較表備註3、4）
-      // 舊版-總表：暫只計【服務費】，其餘項目暫不計算（新舊比較表備註10，屬暫定規則，日後確認後請調整此處）
-      const skipPipeCost = (version==='new' && group==='sub') || (version==='old' && group==='main');
-      // 舊版-分表：不計【水表組】費用，假定用戶自行處理（新舊比較表備註9）
-      const skipMeterOnly = (version==='old' && group==='sub');
+      const isMain = (group==='main');
+      const useTotalLength = isMain && spec.calcMethod === 'totalLength';
+      // 相容舊資料：舊案件若沒存 include/calcMethod，退回目前的預設矩陣
+      const included = (spec.include && spec.include[version]) ? spec.include[version] : DEFAULT_INCLUDE[group][version];
 
-      // 水表組依「表位」（平面/立式）查不同欄位；口徑>50mm時介面隱藏表位選擇，但仍需一個值，一律以目前 spec.position 查（DIP等單一水表組數值的管材，平面/立式欄位已填入相同數字，查哪個都一樣）
+      // 水表組依「表位」（平面/立式）查不同欄位；裝表費依「伸縮止水栓」（自備/供料）查不同欄位，與管材無關、只依口徑
       const meterItem = (spec.position === '立式') ? '水表組_立式' : '水表組_平面';
-      // 裝表費依「伸縮止水栓」（自備/供料）查不同欄位；裝表費本身與管材無關，只依口徑
-      const installItem = (spec.stopcock === '供料' || spec.stopcock === '本公司供料') ? '裝表費_供料' : '裝表費_自備';
+      const installItem = (spec.stopcock === '供料') ? '裝表費_供料' : '裝表費_自備';
 
-      const jieShuiChu = skipPipeCost ? {value:0,verified:true} : lookupRate(version,mat,'pipe',spec.caliber,'接水處');
-      const shuiBiao   = (skipPipeCost || skipMeterOnly) ? {value:0,verified:true} : lookupRate(version,mat,'meter',spec.caliber,meterItem);
-      const base4m     = skipPipeCost ? {value:0,verified:true} : lookupRate(version,mat,'pipe',spec.caliber,'基本4公尺工料費');
-      const perM        = skipPipeCost ? {value:0,verified:true} : lookupRate(version,mat,'pipe',spec.caliber,'每增加1公尺工料費');
-      const install     = version==='new' ? lookupRate(version,mat,'pipe',spec.caliber,installItem) : {value:0,verified:true};
-      const conn         = group==='main' ? {value:0,verified:true} : lookupConn(spec.caliber);
+      const jsRate = lookupRate(version,mat,'pipe',spec.caliber,'接水處');
+      const sbRate = lookupRate(version,mat,'meter',spec.caliber,meterItem);
+      const b4Rate = lookupRate(version,mat,'pipe',spec.caliber,'基本4公尺工料費');
+      const pmRate = lookupRate(version,mat,'pipe',spec.caliber,'每增加1公尺工料費');
+      const inRate = version==='new' ? lookupRate(version,mat,'pipe',spec.caliber,installItem) : {value:0,verified:true};
+      const cnRate = lookupConn(spec.caliber);
+      const svRate = {value:SERVICE_FEE[version]||0, verified:true};
 
-      const pipeUnit = jieShuiChu.value + shuiBiao.value + base4m.value + perM.value*excess;
-      const pipeSubtotal = pipeUnit * count;
-      const connSubtotal = conn.value * count;
-      const installSubtotal = install.value * count;
+      // 每加1M 的乘數：預設模式是「超出4米的長度」；總表選了「總長度算法」則改用總長度，且基本4米這項直接視為不適用(不勾也不計)
+      const perMMult = useTotalLength ? (spec.length||0) : excess;
+
+      // 每一項：{ rate, on(是否勾選保留), mult(this item除了顆數外，還要再乘上的倍數，預設1), na(是否為結構性不適用，唯獨總表選了總長度算法時的基本4M) }
+      const items = {
+        接水處: { rate:jsRate, on: !!included.接水處, mult:1 },
+        水表組: { rate:sbRate, on: !!included.水表組, mult:1 },
+        基本4M: { rate:b4Rate, on: useTotalLength ? false : !!included.基本4M, mult:1, na: useTotalLength },
+        每加1M: { rate:pmRate, on: !!included.每加1M, mult: perMMult, multLabel: `${perMMult}m` },
+        接水費: { rate:cnRate, on: !!included.接水費, mult:1 },
+        裝表費: { rate:inRate, on: !!included.裝表費, mult:1 },
+        服務費: { rate:svRate, on: !!included.服務費, mult:1 }
+      };
+      Object.values(items).forEach(it=>{ it.ext = it.on ? it.rate.value * it.mult * count : 0; });
+
+      const pipeSubtotal = items.接水處.ext + items.水表組.ext + items.基本4M.ext + items.每加1M.ext;
+      const connSubtotal = items.接水費.ext;
+      const installSubtotal = items.裝表費.ext;
+      const serviceSubtotal = items.服務費.ext;
 
       lines.push({
-        group, groupLabel:TABLE_TYPES[group], caliber:spec.caliber,
-        material:mat, count, length:spec.length, excess, position:spec.position, stopcock:spec.stopcock, skipPipeCost,
-        接水處:jieShuiChu, 水表組:shuiBiao, 基本4M:base4m, 每加1M:perM, 裝表費:install, 接水費:conn,
-        pipeUnit, pipeSubtotal, connSubtotal, installSubtotal,
-        lineTotal: pipeSubtotal + connSubtotal + installSubtotal,
-        anyUnverified: [jieShuiChu,shuiBiao,base4m,perM,install,conn].some(x=>!x.verified)
+        group, groupLabel:TABLE_TYPES[group], caliber:spec.caliber, specId:spec.id,
+        material:mat, count, length:spec.length, excess, position:spec.position, stopcock:spec.stopcock,
+        calcMethod: isMain ? (spec.calcMethod||'base4m') : null,
+        items,
+        pipeSubtotal, connSubtotal, installSubtotal, serviceSubtotal,
+        lineTotal: pipeSubtotal + connSubtotal + installSubtotal + serviceSubtotal,
+        anyUnverified: Object.values(items).some(it=>it.on && !it.rate.verified)
       });
     });
   });
@@ -591,7 +641,8 @@ function calcForVersion(version){
   const pipeTotal = lines.reduce((s,l)=>s+l.pipeSubtotal,0);
   const connTotal = lines.reduce((s,l)=>s+l.connSubtotal,0);
   const installTotal = lines.reduce((s,l)=>s+l.installSubtotal,0);
-  const serviceTotal = totalMeterCount * (SERVICE_FEE[version]||0);
+  const serviceTotal = lines.reduce((s,l)=>s+l.serviceSubtotal,0);
+  const totalMeterCount = lines.reduce((s,l)=> s + (l.items.服務費.on ? l.count : 0), 0);
   const grandTotal = pipeTotal + connTotal + installTotal + serviceTotal;
 
   return {version, lines, pipeTotal, connTotal, installTotal, serviceTotal, totalMeterCount, grandTotal,
@@ -624,50 +675,50 @@ function renderResult(res){
         <div class="amt nums ${diff>=0?'up':'down'}">${diff>=0?'+':''}$ ${fmt(diff)}　（${diff>=0?'+':''}${pct.toFixed(1)}%）</div>
       </div>
     </div>
-    ${breakdownHtml('新版', res.new)}
-    ${breakdownHtml('舊版', res.old)}
+    ${breakdownHtml('新版', res.new, 'new')}
+    ${breakdownHtml('舊版', res.old, 'old')}
   `;
 }
-function breakdownHtml(label, r){
-  const svcPerMeter = r.totalMeterCount ? (r.serviceTotal / r.totalMeterCount) : (SERVICE_FEE[r.version]||0);
-  // unit: 單價, mult: 顯示在×後面的乘數說明(例如 "236" 或 "0m×236"), ext: 小計(hover顯示)
-  const stack = (unit, mult, ext) => {
-    if(ext===0) return `<td class="nums cell-stack zero" title="小計 $0">—</td>`;
-    return `<td class="nums cell-stack" title="小計 $${fmt(ext)}"><span class="up">$${fmt(unit)}</span><span class="mult">×${mult}</span></td>`;
+const BREAKDOWN_COLS = ['接水處','水表組','基本4M','每加1M','接水費','裝表費','服務費'];
+function toggleInclude(group, specId, version, key, checked){
+  const spec = state[group].find(r=>r.id===specId);
+  if(!spec) return;
+  if(!spec.include){ spec.include = { new:{...DEFAULT_INCLUDE[group].new}, old:{...DEFAULT_INCLUDE[group].old} }; }
+  spec.include[version][key] = checked;
+  calculate(); // 立即重新試算＋重繪畫面
+}
+function breakdownHtml(label, r, version){
+  const itemCell = (l, key) => {
+    const it = l.items[key];
+    const chk = `<input type="checkbox" class="incl-chk" ${it.on?'checked':''} ${it.na?'disabled':''}
+        onchange="toggleInclude('${l.group}','${l.specId}','${version}','${key}',this.checked)"
+        title="${it.na? '總表選了「總長度算法」，此項不計算':'勾選＝計入這項費用'}">`;
+    if(it.na) return `<td class="nums cell-stack na"><label class="incl-toggle">${chk}</label><span class="zero">不適用</span></td>`;
+    if(!it.on) return `<td class="nums cell-stack off"><label class="incl-toggle">${chk}</label><span class="zero">已排除</span></td>`;
+    if(it.ext===0) return `<td class="nums cell-stack zero" title="小計 $0"><label class="incl-toggle">${chk}</label><span class="zero">—</span></td>`;
+    const multLabel = it.multLabel ? `${it.multLabel}×${l.count}` : `${l.count}`;
+    return `<td class="nums cell-stack" title="小計 $${fmt(it.ext)}"><label class="incl-toggle">${chk}</label><span class="up">$${fmt(it.rate.value)}</span><span class="mult">×${multLabel}</span></td>`;
   };
-  const naCell = `<td class="nums cell-stack na" colspan="4" title="新版分表規則：不計算接水處/水表組/工料費">不適用（規則排除）</td>`;
   const rows = r.lines.map(l=>{
-    const svcLine = l.count * svcPerMeter;
-    const jsChuExt = l.接水處.value * l.count;
-    const sbExt = l.水表組.value * l.count;
-    const b4mExt = l.基本4M.value * l.count;
-    const perMExt = l.每加1M.value * l.excess * l.count;
-    const pipeCols = l.skipPipeCost ? naCell : (
-      stack(l.接水處.value, l.count, jsChuExt) +
-      stack(l.水表組.value, l.count, sbExt) +
-      stack(l.基本4M.value, l.count, b4mExt) +
-      stack(l.每加1M.value, `${l.excess}m×${l.count}`, perMExt)
-    );
+    if(!l.items) return `<tr><td colspan="14" style="text-align:center;color:var(--amber)">⚠ 這筆資料是更新前的舊格式，請按「試算」重新計算後再存檔覆蓋</td></tr>`;
+    const cols = BREAKDOWN_COLS.map(k=>itemCell(l,k)).join('');
     return `
     <tr>
       <td>${l.groupLabel}</td>
       <td>${l.material}</td>
       <td>${l.caliber}mm</td>
       <td>${l.count}</td>
-      <td>${l.skipPipeCost ? '—' : l.length}</td>
-      ${pipeCols}
-      ${stack(l.接水費.value, l.count, l.connSubtotal)}
-      ${stack(l.裝表費.value, l.count, l.installSubtotal)}
-      ${stack(svcPerMeter, l.count, svcLine)}
-      <td class="nums" style="font-weight:700;">${fmt(l.lineTotal + svcLine)}</td>
+      <td>${l.length}${l.calcMethod==='totalLength'?' <span class="badge warn" style="font-size:9px;">總長算法</span>':''}</td>
+      ${cols}
+      <td class="nums" style="font-weight:700;">${fmt(l.lineTotal)}</td>
       <td>${l.anyUnverified?'<span class="badge warn">需補充</span>':'<span class="badge ok">已核對</span>'}</td>
     </tr>`;}).join('');
   return `
-  <details class="breakdown">
+  <details class="breakdown" open>
     <summary>${label}明細（管線費 $${fmt(r.pipeTotal)} ＋ 接水費 $${fmt(r.connTotal)} ＋ 裝表費 $${fmt(r.installTotal)} ＋ 服務費 $${fmt(r.serviceTotal)}（${r.totalMeterCount} 顆表）＝ $${fmt(r.grandTotal)}）</summary>
-    <p style="color:var(--ink-soft);font-size:11px;margin:2px 0 8px;">每格顯示「單價×數量」，滑鼠移到格子上可看該項小計。</p>
+    <p style="color:var(--ink-soft);font-size:11px;margin:2px 0 8px;">每格顯示「單價×數量」，滑鼠移到格子上可看小計；勾選框可直接開關這項費用要不要計算，勾一下馬上重算。</p>
     <table class="bk-table">
-      <thead><tr><th>表別</th><th>管材</th><th>口徑</th><th>顆數</th><th>長度</th><th>接水處</th><th>水表組</th><th>基本4M</th><th>每加1M×超出</th><th>接水費</th><th>裝表費</th><th>服務費</th><th>小計</th><th>狀態</th></tr></thead>
+      <thead><tr><th>表別</th><th>管材</th><th>口徑</th><th>顆數</th><th>長度</th><th>接水處</th><th>水表組</th><th>基本4M</th><th>每加1M</th><th>接水費</th><th>裝表費</th><th>服務費</th><th>小計</th><th>狀態</th></tr></thead>
       <tbody>${rows || '<tr><td colspan="14" style="text-align:center;color:var(--ink-soft)">尚無資料</td></tr>'}</tbody>
     </table>
   </details>`;
@@ -963,7 +1014,7 @@ function showCaseDetail(id){
     `<div class="compare-wrap">
       <div class="ver-card new"><div class="label">新版總金額</div><div class="total nums">$ ${fmt(c.result.new.grandTotal)}</div></div>
       <div class="ver-card old"><div class="label">舊版總金額</div><div class="total nums">$ ${fmt(c.result.old.grandTotal)}</div></div>
-    </div>` + breakdownHtml('新版', c.result.new) + breakdownHtml('舊版', c.result.old);
+    </div>` + breakdownHtml('新版', c.result.new, 'new') + breakdownHtml('舊版', c.result.old, 'old');
 }
 
 /* ============================================================
