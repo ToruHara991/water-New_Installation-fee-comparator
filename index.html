@@ -184,6 +184,24 @@
   </div>
 
   <div class="card">
+    <h3>常用範本 <span class="tag">選用</span></h3>
+    <p style="color:var(--ink-soft);font-size:12px;margin:0 0 10px;">
+      範本只存「總表／獨立表／分表」的規格內容（口徑、管材、表位、止水栓、費用開關、總表算法），
+      不含單位名稱、案號、建案名稱、地址——套用範本不會動到您已經填好的這幾項。
+    </p>
+    <div class="filters" style="margin-bottom:6px;">
+      <div class="field" style="min-width:260px;flex:1 1 260px;"><label>選擇範本</label>
+        <select id="tmpl-select"><option value="">－ 選擇常用範本 －</option></select>
+      </div>
+      <div class="field" style="align-self:flex-end;"><button class="btn secondary" onclick="applyTemplate()">套用這個範本</button></div>
+      <div class="field" style="align-self:flex-end;"><button class="btn ghost" onclick="updateSelectedTemplate()">用目前規格更新此範本</button></div>
+      <div class="field" style="align-self:flex-end;"><button class="btn ghost" onclick="deleteSelectedTemplate()" style="color:var(--down);">刪除此範本</button></div>
+      <div class="field" style="align-self:flex-end;"><button class="btn" onclick="saveTemplateAsNew()">將目前規格另存為新範本</button></div>
+    </div>
+    <div class="savebar"><span class="msg" id="tmpl-msg"></span></div>
+  </div>
+
+  <div class="card">
     <h3>總表 <span class="tag">通常 1 顆</span></h3>
     <div id="rows-main"></div>
     <button class="add-btn" onclick="addRow('main')">＋ 新增一組總表規格</button>
@@ -470,6 +488,7 @@ let RATES = [];       // seedRates() 格式陣列
 let CONN = [];        // seedConn() 格式陣列
 let SERVICE_FEE = {new:1050, old:500};
 let CASES = [];        // 已存檔案件快取
+let TEMPLATES = [];    // 常用範本快取（跟案件完全分開的陣列，不會混在一起）
 
 /* ============================================================
    Storage helpers
@@ -831,9 +850,16 @@ async function reloadCases(){
       const results = await Promise.all(keys.map(k=>storageGet(k,true).catch(()=>null)));
       CASES = results.filter(Boolean).map(r=>{ try{return JSON.parse(r.value);}catch(e){return null;} }).filter(Boolean);
     }catch(e){ CASES = []; }
+    try{
+      const tidx = await storageList('tmpl:', true);
+      const tkeys = (tidx && tidx.keys) || [];
+      const tresults = await Promise.all(tkeys.map(k=>storageGet(k,true).catch(()=>null)));
+      TEMPLATES = tresults.filter(Boolean).map(r=>{ try{return JSON.parse(r.value);}catch(e){return null;} }).filter(Boolean);
+    }catch(e){ TEMPLATES = []; }
   }
   document.getElementById('status-left').textContent = `已載入 ${CASES.length} 筆案件`;
   populateUnitFilter();
+  populateTemplateSelect();
   renderAnalysis();
 }
 function populateUnitFilter(){
@@ -1229,6 +1255,107 @@ async function deleteCase(id){
     if(stillThere){ stillThere.disabled = false; stillThere.textContent = '刪除'; }
   }
 }
+
+/* ============================================================
+   常用範本：跟「案件」是兩套完全獨立的東西——
+   - 存放位置分開（雲端試算表 Templates 分頁 vs Cases 分頁；本機 tmpl: 開頭的key vs case: 開頭）
+   - ID分開產生（genTemplateId 前綴 t，跟案件的 c 前綴不會混）
+   - 範本只存「規格內容」(state.main/indep/sub，含每列的口徑/管材/表位/止水栓/費用開關/總表算法)，
+     不含單位名稱/案號/建立時間/建案名稱/住址這些「案件才有」的欄位，
+     所以套用範本不會動到您已經填好的案號、建案名稱、住址。
+   - 套用範本前一定會跳確認視窗，不會沒說一聲就把畫面上正在編輯的東西蓋掉。
+   - 「另存新範本」跟「更新目前這個範本」是兩顆分開的按鈕，不會因為連點誤觸而覆蓋錯範本，
+     邏輯跟案件的「存檔/更新」防重複機制一樣。
+   ============================================================ */
+function genTemplateId(){ return 't'+Date.now()+Math.random().toString(36).slice(2,7); }
+let editingTemplateId = null;
+
+function populateTemplateSelect(){
+  const sel = document.getElementById('tmpl-select');
+  if(!sel) return;
+  const cur = sel.value;
+  sel.innerHTML = '<option value="">－ 選擇常用範本 －</option>' +
+    TEMPLATES.map(t=>`<option value="${t.id}">${t.name}${t.type?'（'+t.type+'）':''}</option>`).join('');
+  if(TEMPLATES.some(t=>t.id===cur)) sel.value = cur;
+}
+
+function currentSpecsEmpty(){
+  return state.main.length===0 && state.indep.length===0 && state.sub.length===0;
+}
+
+async function saveTemplateAsNew(){
+  if(currentSpecsEmpty()){ alert('目前的總表／獨立表／分表都是空的，沒有東西可以存成範本'); return; }
+  const name = prompt('幫這個範本取個名字（例如：公寓大樓型-總表50mm+7戶分表）：');
+  if(!name || !name.trim()) return;
+  const id = genTemplateId();
+  const tmpl = { id, name: name.trim(), type: document.getElementById('f-type').value,
+                 savedAt: new Date().toISOString(), groups: JSON.parse(JSON.stringify(state)) };
+  await persistTemplate_(tmpl, '已另存為新範本');
+  editingTemplateId = id;
+  populateTemplateSelect();
+  document.getElementById('tmpl-select').value = id;
+}
+
+async function updateSelectedTemplate(){
+  const id = document.getElementById('tmpl-select').value;
+  if(!id){ alert('請先在上面選一個要更新的範本'); return; }
+  if(currentSpecsEmpty()){ alert('目前的總表／獨立表／分表都是空的，沒有東西可以更新進範本'); return; }
+  const old = TEMPLATES.find(t=>t.id===id);
+  if(!confirm(`確定要把目前畫面上的規格內容，覆蓋更新到範本「${old?old.name:id}」嗎？`)) return;
+  const tmpl = { id, name: old?old.name:id, type: document.getElementById('f-type').value,
+                 savedAt: new Date().toISOString(), groups: JSON.parse(JSON.stringify(state)) };
+  await persistTemplate_(tmpl, '已更新範本');
+}
+
+async function persistTemplate_(tmpl, okMsg){
+  const btn = document.getElementById('tmpl-msg');
+  try{ await storageSet('tmpl:'+tmpl.id, JSON.stringify(tmpl), true); }catch(e){ /* 本機快取失敗不擋雲端 */ }
+  const idx = TEMPLATES.findIndex(t=>t.id===tmpl.id);
+  if(idx>-1) TEMPLATES[idx]=tmpl; else TEMPLATES.push(tmpl);
+  let msg = okMsg;
+  if(GAS_URL){
+    const flat = { id:tmpl.id, name:tmpl.name, type:tmpl.type||'', savedAt:tmpl.savedAt, groupsJson: JSON.stringify(tmpl.groups) };
+    const r = await gasPost('saveTemplate', flat);
+    msg += (r && r.ok) ? '，已同步至 Google 試算表' : `，同步失敗：${(r&&r.error)||'未知錯誤'}（範本仍留在畫面上，可以稍後重試）`;
+  }
+  if(btn) btn.textContent = msg;
+  populateTemplateSelect();
+}
+
+function applyTemplate(){
+  const id = document.getElementById('tmpl-select').value;
+  if(!id) return;
+  const tmpl = TEMPLATES.find(t=>t.id===id);
+  if(!tmpl) return;
+  if(!currentSpecsEmpty()){
+    if(!confirm(`套用範本「${tmpl.name}」會覆蓋目前畫面上已經填的總表／獨立表／分表規格（單位名稱、案號、建案名稱、住址不會被動到）。確定要套用嗎？`)) return;
+  }
+  state.main = JSON.parse(JSON.stringify(tmpl.groups.main||[]));
+  state.indep = JSON.parse(JSON.stringify(tmpl.groups.indep||[]));
+  state.sub = JSON.parse(JSON.stringify(tmpl.groups.sub||[]));
+  renderRows('main'); renderRows('indep'); renderRows('sub');
+  editingTemplateId = id;
+  document.getElementById('tmpl-msg').textContent = `已套用範本「${tmpl.name}」`;
+}
+
+async function deleteSelectedTemplate(){
+  const id = document.getElementById('tmpl-select').value;
+  if(!id){ alert('請先在上面選一個要刪除的範本'); return; }
+  const tmpl = TEMPLATES.find(t=>t.id===id);
+  if(!confirm(`確定要刪除範本「${tmpl?tmpl.name:id}」嗎？這不會動到任何已存檔的案件，只是刪除這個範本本身。`)) return;
+  if(GAS_URL){
+    const r = await gasPost('deleteTemplate', {id});
+    if(!r || !r.ok){
+      alert('刪除失敗：' + ((r&&r.error)||'未知錯誤') + '（雲端試算表那一列還在，請確認網路或稍後再試）');
+      return;
+    }
+  }
+  try{ await storageDelete('tmpl:'+id, true); }catch(e){}
+  TEMPLATES = TEMPLATES.filter(t=>t.id!==id);
+  if(editingTemplateId===id) editingTemplateId=null;
+  populateTemplateSelect();
+  document.getElementById('tmpl-msg').textContent = '已刪除範本';
+}
 async function gasFetchAll(){
   if(!GAS_URL) return null;
   try{
@@ -1269,6 +1396,11 @@ async function loadFromCloudIfConfigured(){
         if(r.address!==undefined) full.address = r.address;
         return full;
       }catch(e){ return null; }
+    }).filter(Boolean);
+  }
+  if(cloud.templates){
+    TEMPLATES = cloud.templates.map(t=>{
+      try{ return {...t, groups: JSON.parse(t.groupsJson)}; }catch(e){ return null; }
     }).filter(Boolean);
   }
   return true;
@@ -1386,12 +1518,16 @@ const CONFIG = {
     CASES: 'Cases',
     RATES: 'Rates',
     CONN: 'Conn',
-    CONFIG: 'Config'
+    CONFIG: 'Config',
+    TEMPLATES: 'Templates'
   },
   CASE_HEADERS: ['id','unit','caseno','date','type','savedAt','newTotal','oldTotal','diff','diffPct','meterCount','fullJson','project','address'],
   RATE_HEADERS: ['version','material','kind','caliber','item','value','verified'],
   CONN_HEADERS: ['caliber','value','verified'],
-  CONFIG_HEADERS: ['key','value']
+  CONFIG_HEADERS: ['key','value'],
+  // 常用範本：跟案件（Cases）完全分開存放在自己的分頁，範本的存/刪不會碰到任何一筆案件資料，
+  // 案件的存/刪也不會碰到範本——這是刻意的設計，就是為了不要「資料錯亂覆蓋」。
+  TEMPLATE_HEADERS: ['id','name','type','savedAt','groupsJson']
 };
 
 /* ---------- 資料夾／試算表 ---------- */
@@ -1463,6 +1599,7 @@ function ensureTabs_(ss){
   ensureSheetWithHeaders_(ss, CONFIG.TABS.RATES, CONFIG.RATE_HEADERS);
   ensureSheetWithHeaders_(ss, CONFIG.TABS.CONN, CONFIG.CONN_HEADERS);
   ensureSheetWithHeaders_(ss, CONFIG.TABS.CONFIG, CONFIG.CONFIG_HEADERS);
+  ensureSheetWithHeaders_(ss, CONFIG.TABS.TEMPLATES, CONFIG.TEMPLATE_HEADERS);
   // 拿掉試算表預設多出來的空白 Sheet1（如果還在而且是空的）
   const defaultSheet = ss.getSheetByName('工作表1') || ss.getSheetByName('Sheet1');
   if(defaultSheet && ss.getSheets().length > 1 && defaultSheet.getLastRow() === 0){
@@ -1485,6 +1622,12 @@ function ensureSheetWithHeaders_(ss, name, headers){
       const missing = headers.slice(existingCount);
       sheet.getRange(1, existingCount+1, 1, missing.length).setValues([missing]);
     }
+  }
+  // 把 date 欄位整欄鎖定成「純文字」格式，避免Google試算表自動把 2026-06-10 這種字串
+  // 誤判成日期格式儲存，導致之後讀出來時區換算跑掉、少一天
+  const dateCol = headers.indexOf('date');
+  if(dateCol > -1){
+    sheet.getRange(2, dateCol+1, Math.max(sheet.getMaxRows()-1,1), 1).setNumberFormat('@');
   }
   return sheet;
 }
@@ -1514,6 +1657,30 @@ function deleteCaseRow_(sheet, id){
   return false;
 }
 
+/* ---------- Templates（跟 Cases 完全分開的分頁、分開的ID、分開的CRUD，避免混到案件資料）---------- */
+function upsertTemplateRow_(sheet, row){
+  const data = sheet.getDataRange().getValues();
+  const idCol = CONFIG.TEMPLATE_HEADERS.indexOf('id');
+  let targetRow = -1;
+  for(let i=1;i<data.length;i++){
+    if(data[i][idCol] === row.id){ targetRow = i+1; break; }
+  }
+  const values = CONFIG.TEMPLATE_HEADERS.map(h => row[h] !== undefined ? row[h] : '');
+  if(targetRow > -1){
+    sheet.getRange(targetRow,1,1,values.length).setValues([values]);
+  } else {
+    sheet.appendRow(values);
+  }
+}
+function deleteTemplateRow_(sheet, id){
+  const data = sheet.getDataRange().getValues();
+  const idCol = CONFIG.TEMPLATE_HEADERS.indexOf('id');
+  for(let i=1;i<data.length;i++){
+    if(data[i][idCol] === id){ sheet.deleteRow(i+1); return true; }
+  }
+  return false;
+}
+
 /* ---------- Rates / Conn / Config：整批覆蓋寫入（系統端已經是完整清單，直接覆蓋最簡單也最不會出現殘留舊資料）---------- */
 function overwriteSheetRows_(sheet, headers, rows){
   const lastRow = sheet.getLastRow();
@@ -1526,12 +1693,24 @@ function overwriteSheetRows_(sheet, headers, rows){
   }
 }
 
-function readSheetAsObjects_(sheet, headers){
+function readSheetAsObjects_(sheet, headers, tz){
+  const zone = tz || Session.getScriptTimeZone() || 'Etc/UTC';
   const data = sheet.getDataRange().getValues();
   if(data.length < 2) return [];
   return data.slice(1).filter(r => r.some(v=>v!=='' && v!==null)).map(r=>{
     const obj = {};
-    headers.forEach((h,i)=> obj[h] = r[i]);
+    headers.forEach((h,i)=>{
+      let v = r[i];
+      if(v instanceof Date){
+        // Google試算表會自動把「看起來像日期」的字串轉成真正的日期格式存起來，
+        // 讀出來變成 JS Date 物件，如果直接 JSON.stringify 會被轉成 UTC 時間，
+        // 在UTC+8的時區下會整整少一天。這裡強制用試算表本身的時區轉回文字。
+        v = (h === 'date')
+          ? Utilities.formatDate(v, zone, 'yyyy-MM-dd')
+          : Utilities.formatDate(v, 'Etc/UTC', "yyyy-MM-dd'T'HH:mm:ss.SSS'Z'");
+      }
+      obj[h] = v;
+    });
     return obj;
   });
 }
@@ -1579,6 +1758,16 @@ function doPost(e){
       return jsonOut_({ok:true});
     }
 
+    if(body.action === 'saveTemplate'){
+      upsertTemplateRow_(ss.getSheetByName(CONFIG.TABS.TEMPLATES), body.payload);
+      return jsonOut_({ok:true});
+    }
+
+    if(body.action === 'deleteTemplate'){
+      const ok = deleteTemplateRow_(ss.getSheetByName(CONFIG.TABS.TEMPLATES), body.payload.id);
+      return jsonOut_({ok:true, deleted: ok});
+    }
+
     return jsonOut_({ok:false, error:'unknown action'});
   }catch(err){
     return jsonOut_({ok:false, error:String(err)});
@@ -1588,10 +1777,12 @@ function doPost(e){
 function doGet(e){
   try{
     const ss = getOrCreateSpreadsheet_();
-    const rows = readSheetAsObjects_(ss.getSheetByName(CONFIG.TABS.CASES), CONFIG.CASE_HEADERS);
-    const rates = readSheetAsObjects_(ss.getSheetByName(CONFIG.TABS.RATES), CONFIG.RATE_HEADERS);
-    const conn = readSheetAsObjects_(ss.getSheetByName(CONFIG.TABS.CONN), CONFIG.CONN_HEADERS);
-    const configRows = readSheetAsObjects_(ss.getSheetByName(CONFIG.TABS.CONFIG), CONFIG.CONFIG_HEADERS);
+    const tz = ss.getSpreadsheetTimeZone();
+    const rows = readSheetAsObjects_(ss.getSheetByName(CONFIG.TABS.CASES), CONFIG.CASE_HEADERS, tz);
+    const rates = readSheetAsObjects_(ss.getSheetByName(CONFIG.TABS.RATES), CONFIG.RATE_HEADERS, tz);
+    const conn = readSheetAsObjects_(ss.getSheetByName(CONFIG.TABS.CONN), CONFIG.CONN_HEADERS, tz);
+    const configRows = readSheetAsObjects_(ss.getSheetByName(CONFIG.TABS.CONFIG), CONFIG.CONFIG_HEADERS, tz);
+    const templates = readSheetAsObjects_(ss.getSheetByName(CONFIG.TABS.TEMPLATES), CONFIG.TEMPLATE_HEADERS, tz);
     const configMap = {};
     configRows.forEach(r => configMap[r.key] = r.value);
     return jsonOut_({
@@ -1599,6 +1790,7 @@ function doGet(e){
       rows,
       rates,
       conn,
+      templates,
       config: {
         serviceFeeNew: configMap.serviceFeeNew !== undefined ? +configMap.serviceFeeNew : undefined,
         serviceFeeOld: configMap.serviceFeeOld !== undefined ? +configMap.serviceFeeOld : undefined,
@@ -1635,6 +1827,15 @@ async function init(){
   await loadGasUrl();          // 先知道有沒有設定 Google 試算表
   await loadOrSeedRates();     // 本機共用快取／內建種子費率先墊底，確保一定看得到資料
   const usedCloud = await loadFromCloudIfConfigured(); // 若已設定，改用 Google 試算表覆蓋（試算表為正式來源）
+  if(!GAS_URL){
+    try{
+      const tidx = await storageList('tmpl:', true);
+      const tkeys = (tidx && tidx.keys) || [];
+      const tresults = await Promise.all(tkeys.map(k=>storageGet(k,true).catch(()=>null)));
+      TEMPLATES = tresults.filter(Boolean).map(r=>{ try{return JSON.parse(r.value);}catch(e){return null;} }).filter(Boolean);
+    }catch(e){ TEMPLATES = []; }
+  }
+  populateTemplateSelect();
   renderRateTable(); renderConnTable(); renderSeedNotice();
   document.getElementById('svc-new').value = SERVICE_FEE.new;
   document.getElementById('svc-old').value = SERVICE_FEE.old;
