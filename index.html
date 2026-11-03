@@ -180,6 +180,7 @@
       </div>
       <div class="field" style="grid-column:span 2;"><label>建案名稱</label><input id="f-project" placeholder="例：○○花園社區"></div>
       <div class="field" style="grid-column:span 2;"><label>地址</label><input id="f-address" placeholder="例：台北市○○區○○路100號"></div>
+      <div class="field"><label><span style="color:#d00000;font-size:17px;font-weight:700;">成本</span> <span class="tag">補填</span></label><input id="f-cost" type="number" step="any" placeholder="可留空"></div>
     </div>
   </div>
 
@@ -346,6 +347,7 @@
           <th class="num" onclick="sortFlat('oldTotal')" style="cursor:pointer;">舊版金額 ▾</th>
           <th class="num" onclick="sortFlat('diff')" style="cursor:pointer;">差額(新−舊) ▾</th>
           <th class="num">差異%</th>
+          <th class="num" onclick="sortFlat('cost')" style="cursor:pointer;"><span style="color:#d00000;font-size:16px;font-weight:700;">成本</span> ▾</th>
           <th></th>
         </tr></thead>
         <tbody id="flat-tbody"></tbody>
@@ -772,10 +774,12 @@ async function saveCase(){
     const type = document.getElementById('f-type').value;
     const project = document.getElementById('f-project').value.trim();
     const address = document.getElementById('f-address').value.trim();
+    const costRaw = document.getElementById('f-cost').value.trim();
+    const cost = costRaw==='' ? '' : Number(costRaw);
     if(!unit){ alert('請填寫單位名稱'); return; }
     const isEdit = !!editingCaseId;
     const id = editingCaseId || genId();
-    const record = { id, unit, caseno, date, type, project, address, groups: JSON.parse(JSON.stringify(state)),
+    const record = { id, unit, caseno, date, type, project, address, cost, groups: JSON.parse(JSON.stringify(state)),
                       result: { new: summarize(res.new), old: summarize(res.old) }, savedAt: new Date().toISOString() };
     let localOk = true;
     try{
@@ -832,7 +836,7 @@ function resetForm(){
   renderRows('main'); renderRows('indep'); renderRows('sub');
   document.getElementById('result-area').innerHTML='';
   document.getElementById('save-msg').textContent='';
-  document.getElementById('f-caseno').value=''; document.getElementById('f-project').value=''; document.getElementById('f-address').value='';
+  document.getElementById('f-caseno').value=''; document.getElementById('f-project').value=''; document.getElementById('f-address').value=''; document.getElementById('f-cost').value='';
   clearEditFlag_(); // 清空表單一律視為離開編輯模式，避免誤把新內容存回舊案件
 }
 
@@ -910,6 +914,7 @@ function renderFlatTable(cases){
     if(f==='newTotal'){ av=a.result?.new?.grandTotal||0; bv=b.result?.new?.grandTotal||0; }
     else if(f==='oldTotal'){ av=a.result?.old?.grandTotal||0; bv=b.result?.old?.grandTotal||0; }
     else if(f==='diff'){ av=(a.result?.new?.grandTotal||0)-(a.result?.old?.grandTotal||0); bv=(b.result?.new?.grandTotal||0)-(b.result?.old?.grandTotal||0); }
+    else if(f==='cost'){ const n=x=>(x.cost===''||x.cost==null||isNaN(+x.cost))?-Infinity:+x.cost; av=n(a); bv=n(b); }
     else { av=(a[f]||''); bv=(b[f]||''); }
     if(av<bv) return -1*flatSort.dir; if(av>bv) return 1*flatSort.dir; return 0;
   });
@@ -928,12 +933,13 @@ function renderFlatTable(cases){
       <td class="num nums">${fmt(co)}</td>
       <td class="num nums"><span class="pill ${cd>=0?'up':'down'}">${cd>=0?'+':''}${fmt(cd)}</span></td>
       <td class="num nums">${pct.toFixed(1)}%</td>
+      <td class="num nums">${(c.cost===''||c.cost===undefined||c.cost===null)?'':fmt(+c.cost)}</td>
       <td class="num" style="white-space:nowrap;">
         <button class="btn ghost" style="padding:3px 9px;font-size:11px;" onclick="showCaseDetail('${c.id}')">明細</button>
         <button class="btn ghost" id="del-btn-${c.id}" style="padding:3px 9px;font-size:11px;color:var(--down);margin-left:4px;" onclick="deleteCase('${c.id}')">刪除</button>
       </td>
     </tr>`;
-  }).join('') || `<tr><td colspan="12" style="text-align:center;color:var(--ink-soft);padding:20px;">目前沒有符合條件的案件</td></tr>`;
+  }).join('') || `<tr><td colspan="13" style="text-align:center;color:var(--ink-soft);padding:20px;">目前沒有符合條件的案件</td></tr>`;
 }
 function renderAnalysis(){
   const by = document.getElementById('grp-by').value;
@@ -999,6 +1005,7 @@ function exportAnalysisExcel(){
       '類型':c.type||'', '表數':c.result?.new?.totalMeterCount||0,
       '新版金額':Math.round(cn), '舊版金額':Math.round(co), '差額(新-舊)':Math.round(cn-co),
       '差異%': co ? +((cn-co)/co*100).toFixed(1) : 0,
+      '成本': (c.cost===''||c.cost===undefined||c.cost===null) ? '' : +c.cost,
       '存檔時間':c.savedAt ? new Date(c.savedAt) : null
     };
   });
@@ -1042,6 +1049,7 @@ function showCaseDetail(id){
   document.getElementById('f-unit').value=c.unit; document.getElementById('f-caseno').value=c.caseno;
   document.getElementById('f-date').value=c.date; document.getElementById('f-type').value=c.type;
   document.getElementById('f-project').value=c.project||''; document.getElementById('f-address').value=c.address||'';
+  document.getElementById('f-cost').value=(c.cost===undefined||c.cost===null)?'':c.cost;
   state.main=c.groups.main; state.indep=c.groups.indep; state.sub=c.groups.sub;
   renderRows('main'); renderRows('indep'); renderRows('sub');
   enterEditMode(c.id, c.caseno);
@@ -1197,7 +1205,7 @@ async function saveGasUrl(val){
 function caseToFlatRow(c){
   return {
     id:c.id, unit:c.unit, caseno:c.caseno, date:c.date, type:c.type,
-    project:c.project||'', address:c.address||'', savedAt:c.savedAt,
+    project:c.project||'', address:c.address||'', cost:(c.cost===undefined||c.cost===null)?'':c.cost, savedAt:c.savedAt,
     newTotal: c.result.new.grandTotal, oldTotal: c.result.old.grandTotal,
     diff: c.result.new.grandTotal - c.result.old.grandTotal,
     diffPct: c.result.old.grandTotal ? ((c.result.new.grandTotal - c.result.old.grandTotal)/c.result.old.grandTotal*100) : 0,
@@ -1342,6 +1350,7 @@ function applyTemplate(){
   document.getElementById('f-caseno').value = '';
   document.getElementById('f-project').value = '';
   document.getElementById('f-address').value = '';
+  document.getElementById('f-cost').value = '';
   document.getElementById('f-date').valueAsDate = new Date();
   if(tmpl.type){ document.getElementById('f-type').value = tmpl.type; }
   document.getElementById('result-area').innerHTML = '';
@@ -1416,6 +1425,7 @@ async function loadFromCloudIfConfigured(){
         if(r.type!==undefined && r.type!=='') full.type = r.type;
         if(r.project!==undefined) full.project = r.project;
         if(r.address!==undefined) full.address = r.address;
+        if(r.cost!==undefined) full.cost = (r.cost===''||r.cost===null) ? '' : Number(r.cost);
         return full;
       }catch(e){ return null; }
     }).filter(Boolean);
@@ -1520,7 +1530,7 @@ function downloadGasScript(){
  *   可以，但務必注意：
  *   (1) 一定要整列貼上，且欄位順序要跟第1列標題完全一致（目前順序是
  *       id, unit, caseno, date, type, savedAt, newTotal, oldTotal, diff, diffPct,
- *       meterCount, fullJson, project, address）——用「Ctrl+Shift+V 只貼上值」比較安全，
+ *       meterCount, fullJson, project, address, cost）——用「Ctrl+Shift+V 只貼上值」比較安全，
  *       避免把公式或格式也貼進來。
  *   (2) 系統實際讀取金額與明細只看 fullJson 這一欄（一整包 JSON 文字），
  *       其他欄位（unit/caseno/date/type/project/address）只是方便人眼看、方便手動修正用的鏡像，
@@ -1543,7 +1553,7 @@ const CONFIG = {
     CONFIG: 'Config',
     TEMPLATES: 'Templates'
   },
-  CASE_HEADERS: ['id','unit','caseno','date','type','savedAt','newTotal','oldTotal','diff','diffPct','meterCount','fullJson','project','address'],
+  CASE_HEADERS: ['id','unit','caseno','date','type','savedAt','newTotal','oldTotal','diff','diffPct','meterCount','fullJson','project','address','cost'],
   RATE_HEADERS: ['version','material','kind','caliber','item','value','verified'],
   CONN_HEADERS: ['caliber','value','verified'],
   CONFIG_HEADERS: ['key','value'],
